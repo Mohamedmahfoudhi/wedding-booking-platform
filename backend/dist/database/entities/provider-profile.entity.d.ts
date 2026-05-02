@@ -1,0 +1,38 @@
+import { User } from './user.entity';
+import { Service } from './service.entity';
+import { Booking } from './booking.entity';
+import { Conversation } from './conversation.entity';
+import { ProviderPayout } from './provider-payout.entity';
+export declare class ProviderProfile {
+    id: string;
+    userId: string;
+    businessName: string;
+    slug: string;
+    description: string;
+    logo: string;
+    coverImage: string;
+    phone: string;
+    email: string;
+    website: string;
+    address: string;
+    city: string;
+    governorate: string;
+    latitude: number;
+    longitude: number;
+    isVerified: boolean;
+    isFeatured: boolean;
+    stripeAccountId: string;
+    stripeOnboarded: boolean;
+    commissionRate: number;
+    totalRevenue: number;
+    totalBookings: number;
+    avgRating: number;
+    reviewCount: number;
+    createdAt: Date;
+    updatedAt: Date;
+    user: User;
+    services: Service[];
+    bookings: Booking[];
+    conversations: Conversation[];
+    payouts: ProviderPayout[];
+}

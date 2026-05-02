@@ -1,0 +1,1368 @@
+{
+  "info": {
+    "name": "Wedding Booking Platform API",
+    "description": "API collection for Wedding Services Booking Platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "refreshToken",
+      "value": ""
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"+21612345678\",\n  \"role\": \"client\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register as Provider",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"provider@example.com\",\n  \"password\": \"Password123!\",\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"phone\": \"+21698765432\",\n  \"role\": \"provider\",\n  \"businessName\": \"Elegant Weddings\",\n  \"businessDescription\": \"Premium wedding services\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.accessToken) {",
+                  "    pm.collectionVariables.set('accessToken', jsonData.accessToken);",
+                  "}",
+                  "if (jsonData.refreshToken) {",
+                  "    pm.collectionVariables.set('refreshToken', jsonData.refreshToken);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/login",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"password\": \"Password123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/refresh",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/logout",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/verify-email",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"verification-token-here\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/forgot-password",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/auth/reset-password",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"reset-token-here\",\n  \"password\": \"NewPassword123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/profile"
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/users/profile",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"phone\": \"+21612345678\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/users/password",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Password123!\",\n  \"newPassword\": \"NewPassword123!\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Deactivate Account",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/users/account"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Providers",
+      "item": [
+        {
+          "name": "Register as Provider",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/providers/register",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"My Wedding Business\",\n  \"description\": \"Premium wedding services\",\n  \"phone\": \"+21612345678\",\n  \"email\": \"business@example.com\",\n  \"city\": \"Tunis\",\n  \"governorate\": \"Tunis\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/providers/profile"
+          }
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/providers/profile",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"businessName\": \"Updated Business Name\",\n  \"description\": \"Updated description\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/providers/dashboard/stats"
+          }
+        },
+        {
+          "name": "List All Providers (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/providers?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["providers"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "city", "value": "", "disabled": true },
+                { "key": "verified", "value": "true", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Provider by Slug (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/providers/:slug"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "Get All Categories (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/categories"
+          }
+        },
+        {
+          "name": "Get Category by Slug (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/categories/:slug"
+          }
+        },
+        {
+          "name": "Create Category (Admin)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/categories",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Photography\",\n  \"nameAr\": \"تصوير\",\n  \"description\": \"Wedding photography services\",\n  \"icon\": \"camera\",\n  \"displayOrder\": 1\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Category (Admin)",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/categories/:id",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"isActive\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Category (Admin)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/categories/:id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Services (Public)",
+      "item": [
+        {
+          "name": "Search Services",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/services?page=1&limit=12",
+              "host": ["{{baseUrl}}"],
+              "path": ["services"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "12" },
+                { "key": "search", "value": "", "disabled": true },
+                { "key": "categoryId", "value": "", "disabled": true },
+                { "key": "minPrice", "value": "", "disabled": true },
+                { "key": "maxPrice", "value": "", "disabled": true },
+                { "key": "city", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Featured Services",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/services/featured?limit=8",
+              "host": ["{{baseUrl}}"],
+              "path": ["services", "featured"],
+              "query": [
+                { "key": "limit", "value": "8" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Service Details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/services/:id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Services (Provider)",
+      "item": [
+        {
+          "name": "Create Service",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/services",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Wedding Photography\",\n  \"categoryId\": \"category-uuid-here\",\n  \"description\": \"Professional wedding photography\",\n  \"basePrice\": 1500,\n  \"priceType\": \"FIXED\",\n  \"durationMinutes\": 480,\n  \"capacityMin\": 1,\n  \"capacityMax\": 500\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Services",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/provider/services?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["provider", "services"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Service Details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/provider/services/:id"
+          }
+        },
+        {
+          "name": "Update My Service",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/provider/services/:id",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Service Name\",\n  \"basePrice\": 2000\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete My Service",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/provider/services/:id"
+          }
+        },
+        {
+          "name": "Add Images to Service",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/services/:id/images",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"images\": [\n    { \"url\": \"https://example.com/image1.jpg\", \"publicId\": \"image1\" },\n    { \"url\": \"https://example.com/image2.jpg\", \"publicId\": \"image2\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Image from Service",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/provider/services/:id/images/:imageId"
+          }
+        },
+        {
+          "name": "Set Primary Image",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/provider/services/:id/images/:imageId/primary"
+          }
+        },
+        {
+          "name": "Add Package to Service",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/services/:id/packages",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Premium Package\",\n  \"description\": \"All inclusive package\",\n  \"price\": 2500,\n  \"features\": [\"Feature 1\", \"Feature 2\", \"Feature 3\"],\n  \"isPopular\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Package",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/provider/services/:id/packages/:packageId",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Package Name\",\n  \"price\": 3000\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete Package",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/provider/services/:id/packages/:packageId"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Availability",
+      "item": [
+        {
+          "name": "Get Service Schedule (Public)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/services/:serviceId/availability"
+          }
+        },
+        {
+          "name": "Get Available Dates (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/services/:serviceId/availability/dates?month=12&year=2024",
+              "host": ["{{baseUrl}}"],
+              "path": ["services", ":serviceId", "availability", "dates"],
+              "query": [
+                { "key": "month", "value": "12" },
+                { "key": "year", "value": "2024" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Available Time Slots (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/services/:serviceId/availability/times?date=2024-12-15",
+              "host": ["{{baseUrl}}"],
+              "path": ["services", ":serviceId", "availability", "times"],
+              "query": [
+                { "key": "date", "value": "2024-12-15" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Check Availability (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/services/:serviceId/availability/check?date=2024-12-15&startTime=10:00&endTime=18:00",
+              "host": ["{{baseUrl}}"],
+              "path": ["services", ":serviceId", "availability", "check"],
+              "query": [
+                { "key": "date", "value": "2024-12-15" },
+                { "key": "startTime", "value": "10:00" },
+                { "key": "endTime", "value": "18:00" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Schedule (Provider)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/provider/services/:serviceId/availability"
+          }
+        },
+        {
+          "name": "Set Weekly Schedule (Provider)",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/provider/services/:serviceId/availability",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schedule\": [\n    { \"dayOfWeek\": 1, \"startTime\": \"09:00\", \"endTime\": \"18:00\", \"isAvailable\": true },\n    { \"dayOfWeek\": 2, \"startTime\": \"09:00\", \"endTime\": \"18:00\", \"isAvailable\": true },\n    { \"dayOfWeek\": 3, \"startTime\": \"09:00\", \"endTime\": \"18:00\", \"isAvailable\": true },\n    { \"dayOfWeek\": 4, \"startTime\": \"09:00\", \"endTime\": \"18:00\", \"isAvailable\": true },\n    { \"dayOfWeek\": 5, \"startTime\": \"09:00\", \"endTime\": \"18:00\", \"isAvailable\": true },\n    { \"dayOfWeek\": 6, \"startTime\": \"10:00\", \"endTime\": \"16:00\", \"isAvailable\": true },\n    { \"dayOfWeek\": 0, \"startTime\": \"00:00\", \"endTime\": \"00:00\", \"isAvailable\": false }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Blocked Dates (Provider)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/provider/services/:serviceId/availability/blocked-dates?start=2024-12-01&end=2024-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["provider", "services", ":serviceId", "availability", "blocked-dates"],
+              "query": [
+                { "key": "start", "value": "2024-12-01" },
+                { "key": "end", "value": "2024-12-31" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Block Dates (Provider)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/services/:serviceId/availability/blocked-dates",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"dates\": [\n    { \"date\": \"2024-12-25\", \"reason\": \"Holiday\" },\n    { \"date\": \"2024-12-26\", \"reason\": \"Holiday\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Unblock Date (Provider)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/provider/services/:serviceId/availability/blocked-dates/:blockedDateId"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings (Client)",
+      "item": [
+        {
+          "name": "Create Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": \"service-uuid-here\",\n  \"packageId\": \"package-uuid-here\",\n  \"eventDate\": \"2024-12-15\",\n  \"startTime\": \"10:00\",\n  \"endTime\": \"18:00\",\n  \"guestCount\": 100,\n  \"notes\": \"Wedding reception\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Bookings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/bookings?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["bookings"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "pending", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Booking Details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/bookings/:id"
+          }
+        },
+        {
+          "name": "Cancel Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/:id/cancel",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Change of plans\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookings (Provider)",
+      "item": [
+        {
+          "name": "Get All Bookings",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/provider/bookings?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["provider", "bookings"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "pending", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Booking Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/provider/bookings/stats"
+          }
+        },
+        {
+          "name": "Get Calendar Events",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/provider/bookings/calendar?start=2024-12-01&end=2024-12-31",
+              "host": ["{{baseUrl}}"],
+              "path": ["provider", "bookings", "calendar"],
+              "query": [
+                { "key": "start", "value": "2024-12-01" },
+                { "key": "end", "value": "2024-12-31" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Manual Booking (SaaS)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/bookings",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serviceId\": \"service-uuid-here\",\n  \"eventDate\": \"2024-12-20\",\n  \"startTime\": \"14:00\",\n  \"endTime\": \"22:00\",\n  \"guestCount\": 150,\n  \"clientName\": \"Ahmed Ben Ali\",\n  \"clientEmail\": \"ahmed@example.com\",\n  \"clientPhone\": \"+21612345678\",\n  \"notes\": \"Engagement party\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Booking Details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/provider/bookings/:id"
+          }
+        },
+        {
+          "name": "Confirm Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/bookings/:id/confirm"
+          }
+        },
+        {
+          "name": "Reject Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/bookings/:id/reject",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Date not available\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Complete Booking",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/bookings/:id/complete"
+          }
+        },
+        {
+          "name": "Mark No-Show",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/bookings/:id/no-show"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Create Payment Intent",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/payments/create-intent",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"bookingId\": \"booking-uuid-here\",\n  \"type\": \"DEPOSIT\",\n  \"amount\": 500\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Booking Payments",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/payments/booking/:bookingId"
+          }
+        },
+        {
+          "name": "Start Stripe Onboarding (Provider)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/stripe/onboard"
+          }
+        },
+        {
+          "name": "Get Stripe Status (Provider)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/provider/stripe/status"
+          }
+        },
+        {
+          "name": "Get Payout History (Provider)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/provider/stripe/payouts?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["provider", "stripe", "payouts"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Get Service Reviews (Public)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/services/:serviceId/reviews?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["services", ":serviceId", "reviews"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/bookings/:bookingId/review",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Excellent service! Highly recommended.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Reviews",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/reviews/my?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["reviews", "my"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update My Review",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/reviews/:id",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"comment\": \"Updated review comment\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete My Review",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/reviews/:id"
+          }
+        },
+        {
+          "name": "Get Provider Reviews (Provider)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/provider/reviews?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["provider", "reviews"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Respond to Review (Provider)",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/provider/reviews/:id/respond",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"response\": \"Thank you for your kind words!\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Favorites",
+      "item": [
+        {
+          "name": "Get My Favorites",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/favorites?page=1&limit=12",
+              "host": ["{{baseUrl}}"],
+              "path": ["favorites"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "12" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add to Favorites",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/favorites/:serviceId"
+          }
+        },
+        {
+          "name": "Remove from Favorites",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/favorites/:serviceId"
+          }
+        },
+        {
+          "name": "Check if Favorite",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/favorites/:serviceId/check"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "item": [
+        {
+          "name": "Get My Conversations",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/conversations"
+          }
+        },
+        {
+          "name": "Start Conversation",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/conversations",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"providerId\": \"provider-uuid-here\",\n  \"serviceId\": \"service-uuid-here\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/conversations/unread-count"
+          }
+        },
+        {
+          "name": "Get Conversation Details",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/conversations/:id"
+          }
+        },
+        {
+          "name": "Get Conversation Messages",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/conversations/:id/messages?page=1&limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["conversations", ":id", "messages"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "50" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/conversations/:id/messages",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Hello, I would like to inquire about your services.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/conversations/:id/read"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Get My Notifications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/notifications?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/notifications/unread-count"
+          }
+        },
+        {
+          "name": "Mark as Read",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/notifications/:id/read"
+          }
+        },
+        {
+          "name": "Mark All as Read",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/notifications/read-all"
+          }
+        },
+        {
+          "name": "Delete Notification",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/notifications/:id"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "Upload Single Image",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/upload/image?folder=services",
+              "host": ["{{baseUrl}}"],
+              "path": ["upload", "image"],
+              "query": [
+                { "key": "folder", "value": "services" }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload Multiple Images",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/upload/images?folder=services",
+              "host": ["{{baseUrl}}"],
+              "path": ["upload", "images"],
+              "query": [
+                { "key": "folder", "value": "services" }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Image",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/upload/:publicId"
+          }
+        },
+        {
+          "name": "Get Upload Signature",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/upload/signature?folder=services",
+              "host": ["{{baseUrl}}"],
+              "path": ["upload", "signature"],
+              "query": [
+                { "key": "folder", "value": "services" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/dashboard/stats"
+          }
+        },
+        {
+          "name": "Get Revenue Chart",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/dashboard/revenue?months=12",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "dashboard", "revenue"],
+              "query": [
+                { "key": "months", "value": "12" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/users?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "users"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "role", "value": "client", "disabled": true },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/users/:id",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true,\n  \"role\": \"client\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/users/:id"
+          }
+        },
+        {
+          "name": "List Providers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/providers?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "providers"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "verified", "value": "false", "disabled": true },
+                { "key": "search", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Verify Provider",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/providers/:id/verify",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"verified\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "Feature Provider",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/providers/:id/feature",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"featured\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "List Services",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/services?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "services"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "status", "value": "PENDING", "disabled": true },
+                { "key": "categoryId", "value": "", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Approve Service",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/services/:id/approve"
+          }
+        },
+        {
+          "name": "Reject Service",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/admin/services/:id/reject",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Incomplete information provided\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Feature Service",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/services/:id/feature",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"featured\": true\n}"
+            }
+          }
+        },
+        {
+          "name": "List Reviews",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/admin/reviews?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "reviews"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Toggle Review Visibility",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/admin/reviews/:id/visibility"
+          }
+        },
+        {
+          "name": "Delete Review",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/admin/reviews/:id"
+          }
+        }
+      ]
+    }
+  ]
+}
