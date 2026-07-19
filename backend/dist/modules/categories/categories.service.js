@@ -37,7 +37,12 @@ let CategoriesService = class CategoriesService {
         return this.categoryRepository.save(category);
     }
     async findAll(activeOnly = true) {
-        const query = this.categoryRepository.createQueryBuilder('category');
+        const query = this.categoryRepository
+            .createQueryBuilder('category')
+            .loadRelationCountAndMap('category.serviceCount', 'category.services', 'service', (qb) => qb.where('service.status = :status AND service.isActive = :isActive', {
+            status: 'approved',
+            isActive: true,
+        }));
         if (activeOnly) {
             query.where('category.isActive = :isActive', { isActive: true });
         }

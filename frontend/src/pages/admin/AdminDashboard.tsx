@@ -15,24 +15,37 @@ interface DashboardStats {
   totalServices: number;
   totalBookings: number;
   totalRevenue: number;
+  monthlyRevenue: number;
   pendingServices: number;
-  monthlyStats: { month: string; bookings: number; revenue: number }[];
-  recentServices: any[];
-  recentBookings: any[];
+  pendingProviders: number;
+}
+
+interface RevenueData {
+  month: string;
+  revenue: number;
 }
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [revenueData, setRevenueData] = useState<RevenueData[]>([]);
+  const [pendingServices, setPendingServices] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadStats();
+    loadDashboardData();
   }, []);
 
-  const loadStats = async () => {
+  const loadDashboardData = async () => {
     try {
-      const response = await adminApi.getDashboard();
-      setStats(response.data);
+      const [statsResponse, revenueResponse, servicesResponse] = await Promise.all([
+        adminApi.getDashboardStats(),
+        adminApi.getRevenueChart(6),
+        adminApi.getServices({ page: 1, limit: 5, status: 'pending' }),
+      ]);
+
+      setStats(statsResponse.data.data.stats);
+      setRevenueData(revenueResponse.data.data.data || []);
+      setPendingServices(servicesResponse.data.data.services || []);
     } catch (error) {
       console.error('Failed to load dashboard stats', error);
     } finally {
@@ -40,27 +53,15 @@ export default function AdminDashboard() {
     }
   };
 
-  const chartData = {
-    labels: stats?.monthlyStats?.map((m) => m.month) || [],
-    datasets: [
-      {
-        label: 'Bookings',
-        data: stats?.monthlyStats?.map((m) => m.bookings) || [],
-        backgroundColor: '#6366f1',
-        borderRadius: 4,
-      },
-    ],
-  };
-
   const revenueChartData = {
-    labels: stats?.monthlyStats?.map((m) => m.month) || [],
+    labels: revenueData.map((m) => m.month),
     datasets: [
       {
         label: 'Revenue (TND)',
-        data: stats?.monthlyStats?.map((m) => m.revenue) || [],
+        data: revenueData.map((m) => m.revenue),
         fill: true,
-        borderColor: '#22c55e',
-        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99, 102, 241, 0.1)',
         tension: 0.4,
       },
     ],
@@ -185,18 +186,10 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Charts */}
-      <div className="col-12 lg:col-6">
+      {/* Chart */}
+      <div className="col-12">
         <Card>
-          <h3 className="mt-0 mb-4">Monthly Bookings</h3>
-          <div style={{ height: '300px' }}>
-            <Chart type="bar" data={chartData} options={chartOptions} />
-          </div>
-        </Card>
-      </div>
-      <div className="col-12 lg:col-6">
-        <Card>
-          <h3 className="mt-0 mb-4">Revenue Trend</h3>
+          <h3 className="mt-0 mb-4">Revenue Trend (Last 6 Months)</h3>
           <div style={{ height: '300px' }}>
             <Chart type="line" data={revenueChartData} options={chartOptions} />
           </div>
@@ -204,7 +197,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Pending Services */}
-      <div className="col-12 lg:col-6">
+      <div className="col-12">
         <Card>
           <div className="flex justify-content-between align-items-center mb-4">
             <h3 className="m-0">Pending Services</h3>
@@ -212,11 +205,16 @@ export default function AdminDashboard() {
               <Button label="View All" icon="pi pi-arrow-right" iconPos="right" className="p-button-text" />
             </Link>
           </div>
-          {stats?.recentServices && stats.recentServices.length > 0 ? (
-            <DataTable value={stats.recentServices.slice(0, 5)} responsiveLayout="scroll">
+          {pendingServices.length > 0 ? (
+            <DataTable value={pendingServices} responsiveLayout="scroll">
               <Column field="name" header="Service" />
               <Column field="provider.businessName" header="Provider" />
               <Column field="category.name" header="Category" />
+              <Column
+                field="basePrice"
+                header="Price"
+                body={(row) => `${row.basePrice} TND`}
+              />
               <Column
                 field="status"
                 header="Status"
@@ -233,42 +231,6 @@ export default function AdminDashboard() {
           ) : (
             <div className="text-center py-4 text-color-secondary">
               No pending services
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* Recent Bookings */}
-      <div className="col-12 lg:col-6">
-        <Card>
-          <div className="flex justify-content-between align-items-center mb-4">
-            <h3 className="m-0">Recent Bookings</h3>
-            <Link to="/admin/bookings">
-              <Button label="View All" icon="pi pi-arrow-right" iconPos="right" className="p-button-text" />
-            </Link>
-          </div>
-          {stats?.recentBookings && stats.recentBookings.length > 0 ? (
-            <DataTable value={stats.recentBookings.slice(0, 5)} responsiveLayout="scroll">
-              <Column
-                field="client"
-                header="Client"
-                body={(row) => `${row.client?.firstName} ${row.client?.lastName}`}
-              />
-              <Column field="service.name" header="Service" />
-              <Column
-                field="eventDate"
-                header="Date"
-                body={(row) => new Date(row.eventDate).toLocaleDateString()}
-              />
-              <Column
-                field="status"
-                header="Status"
-                body={(row) => <Tag value={row.status} severity={getStatusSeverity(row.status)} />}
-              />
-            </DataTable>
-          ) : (
-            <div className="text-center py-4 text-color-secondary">
-              No recent bookings
             </div>
           )}
         </Card>

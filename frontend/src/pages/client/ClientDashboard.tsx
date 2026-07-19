@@ -25,14 +25,14 @@ export default function ClientDashboard() {
   const loadDashboardData = async () => {
     try {
       const [bookingsRes, favoritesRes, notificationsRes] = await Promise.all([
-        bookingsApi.getAll({ limit: 5 }),
-        favoritesApi.getAll({ limit: 4 }),
-        notificationsApi.getAll({ limit: 5 }),
+        bookingsApi.getMyBookings(1, 5),
+        favoritesApi.getAll(1, 4),
+        notificationsApi.getAll(1, 5),
       ]);
 
-      setRecentBookings(bookingsRes.data.data || bookingsRes.data);
-      setFavorites(favoritesRes.data.data || favoritesRes.data);
-      setNotifications(notificationsRes.data.data || notificationsRes.data);
+      setRecentBookings(bookingsRes.data.data?.bookings || []);
+      setFavorites(favoritesRes.data.data?.favorites || favoritesRes.data.data?.services || []);
+      setNotifications(notificationsRes.data.data?.notifications || []);
     } catch (error) {
       console.error('Failed to load dashboard data', error);
     } finally {
@@ -173,7 +173,7 @@ export default function ClientDashboard() {
                   <Column field="service.name" header="Service" body={serviceTemplate} />
                   <Column field="eventDate" header="Date" body={dateTemplate} />
                   <Column field="status" header="Status" body={statusTemplate} />
-                  <Column field="totalPrice" header="Total" body={(row) => `${row.totalPrice} TND`} />
+                  <Column field="total" header="Total" body={(row) => `${row.total} TND`} />
                 </DataTable>
               ) : (
                 <div className="text-center py-4">

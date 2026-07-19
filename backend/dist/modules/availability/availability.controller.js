@@ -41,6 +41,10 @@ let AvailabilityController = class AvailabilityController {
         const available = await this.availabilityService.checkAvailability(serviceId, new Date(date), startTime, endTime);
         return { available };
     }
+    async getPublicBlockedDates(serviceId, start, end) {
+        const blockedDates = await this.availabilityService.getBlockedDates(serviceId, start ? new Date(start) : undefined, end ? new Date(end) : undefined);
+        return { blockedDates };
+    }
 };
 exports.AvailabilityController = AvailabilityController;
 __decorate([
@@ -85,6 +89,17 @@ __decorate([
     __metadata("design:paramtypes", [String, String, String, String]),
     __metadata("design:returntype", Promise)
 ], AvailabilityController.prototype, "checkAvailability", null);
+__decorate([
+    (0, public_decorator_1.Public)(),
+    (0, common_1.Get)('blocked-dates'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get blocked dates for a service (public)' }),
+    __param(0, (0, common_1.Param)('serviceId')),
+    __param(1, (0, common_1.Query)('start')),
+    __param(2, (0, common_1.Query)('end')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String, String, String]),
+    __metadata("design:returntype", Promise)
+], AvailabilityController.prototype, "getPublicBlockedDates", null);
 exports.AvailabilityController = AvailabilityController = __decorate([
     (0, swagger_1.ApiTags)('availability'),
     (0, common_1.Controller)('services/:serviceId/availability'),

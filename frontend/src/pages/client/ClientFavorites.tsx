@@ -21,7 +21,10 @@ export default function ClientFavorites() {
   const loadFavorites = async () => {
     try {
       const response = await favoritesApi.getAll();
-      setFavorites(response.data.data || response.data);
+      const items = response.data.data?.favorites || [];
+      // Backend returns Favorite entities wrapping the service; map to Service[]
+      const services: Service[] = items.map((f: any) => f.service || f);
+      setFavorites(services);
     } catch (error) {
       console.error('Failed to load favorites', error);
       toast.current?.show({

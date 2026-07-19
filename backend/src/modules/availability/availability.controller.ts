@@ -78,6 +78,22 @@ export class AvailabilityController {
     );
     return { available };
   }
+
+  @Public()
+  @Get('blocked-dates')
+  @ApiOperation({ summary: 'Get blocked dates for a service (public)' })
+  async getPublicBlockedDates(
+    @Param('serviceId') serviceId: string,
+    @Query('start') start?: string,
+    @Query('end') end?: string,
+  ) {
+    const blockedDates = await this.availabilityService.getBlockedDates(
+      serviceId,
+      start ? new Date(start) : undefined,
+      end ? new Date(end) : undefined,
+    );
+    return { blockedDates };
+  }
 }
 
 @ApiTags('provider/availability')

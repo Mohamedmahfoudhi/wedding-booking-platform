@@ -41,13 +41,15 @@ export declare class AdminService {
     }>;
     verifyProvider(id: string, verified: boolean): Promise<ProviderProfile>;
     featureProvider(id: string, featured: boolean): Promise<ProviderProfile>;
-    getServices(page?: number, limit?: number, status?: ServiceStatus, categoryId?: string): Promise<{
+    getServices(page?: number, limit?: number, status?: ServiceStatus, categoryId?: string, categorySlug?: string): Promise<{
         services: Service[];
         total: number;
     }>;
     approveService(id: string): Promise<Service>;
     rejectService(id: string, reason: string): Promise<Service>;
     featureService(id: string, featured: boolean): Promise<Service>;
+    toggleFeatured(id: string): Promise<Service>;
+    deleteService(id: string): Promise<void>;
     getReviews(page?: number, limit?: number): Promise<{
         reviews: Review[];
         total: number;

@@ -30,13 +30,14 @@ export default function AdminProviders() {
   const loadProviders = async () => {
     setLoading(true);
     try {
-      const response = await adminApi.getProviders({
-        page: first / rows + 1,
-        limit: rows,
-        search: globalFilter || undefined,
-      });
-      setProviders(response.data.data || response.data);
-      setTotalRecords(response.data.total || (response.data.data || response.data).length);
+      const response = await adminApi.getProviders(
+        first / rows + 1,
+        rows,
+        undefined,
+        globalFilter || undefined
+      );
+      setProviders(response.data.data.providers || []);
+      setTotalRecords(response.data.data.meta?.total || 0);
     } catch (error) {
       console.error('Failed to load providers', error);
     } finally {
@@ -51,7 +52,7 @@ export default function AdminProviders() {
 
   const handleVerify = async (provider: ProviderProfile) => {
     try {
-      await adminApi.verifyProvider(provider.id);
+      await adminApi.verifyProvider(provider.id, true);
       toast.current?.show({
         severity: 'success',
         summary: 'Success',
@@ -69,24 +70,24 @@ export default function AdminProviders() {
 
   const handleSuspend = (provider: ProviderProfile) => {
     confirmDialog({
-      message: 'Are you sure you want to suspend this provider?',
-      header: 'Suspend Provider',
+      message: 'Are you sure you want to unverify this provider?',
+      header: 'Unverify Provider',
       icon: 'pi pi-exclamation-triangle',
       acceptClassName: 'p-button-danger',
       accept: async () => {
         try {
-          await adminApi.suspendProvider(provider.id);
+          await adminApi.verifyProvider(provider.id, false);
           toast.current?.show({
             severity: 'success',
-            summary: 'Suspended',
-            detail: 'Provider suspended successfully',
+            summary: 'Unverified',
+            detail: 'Provider unverified successfully',
           });
           loadProviders();
         } catch (error) {
           toast.current?.show({
             severity: 'error',
             summary: 'Error',
-            detail: 'Failed to suspend provider',
+            detail: 'Failed to unverify provider',
           });
         }
       },
@@ -116,9 +117,9 @@ export default function AdminProviders() {
 
   const verifiedTemplate = (rowData: ProviderProfile) => (
     <Tag
-      value={rowData.verified ? 'Verified' : 'Not Verified'}
-      severity={rowData.verified ? 'success' : 'warning'}
-      icon={rowData.verified ? 'pi pi-verified' : 'pi pi-clock'}
+      value={rowData.isVerified ? 'Verified' : 'Not Verified'}
+      severity={rowData.isVerified ? 'success' : 'warning'}
+      icon={rowData.isVerified ? 'pi pi-verified' : 'pi pi-clock'}
     />
   );
 
@@ -139,7 +140,7 @@ export default function AdminProviders() {
           setDetailsVisible(true);
         }}
       />
-      {!rowData.verified && (
+      {!rowData.isVerified && (
         <Button
           icon="pi pi-verified"
           className="p-button-rounded p-button-text p-button-success"
@@ -147,12 +148,14 @@ export default function AdminProviders() {
           tooltip="Verify"
         />
       )}
-      <Button
-        icon="pi pi-ban"
-        className="p-button-rounded p-button-text p-button-danger"
-        onClick={() => handleSuspend(rowData)}
-        tooltip="Suspend"
-      />
+      {rowData.isVerified && (
+        <Button
+          icon="pi pi-ban"
+          className="p-button-rounded p-button-text p-button-danger"
+          onClick={() => handleSuspend(rowData)}
+          tooltip="Unverify"
+        />
+      )}
     </div>
   );
 
@@ -248,7 +251,7 @@ export default function AdminProviders() {
                 <h3 className="m-0">{selectedProvider.businessName}</h3>
                 <p className="text-color-secondary m-0">{selectedProvider.user?.email}</p>
                 <div className="flex gap-2 mt-2">
-                  {selectedProvider.verified && (
+                  {selectedProvider.isVerified && (
                     <Tag value="Verified" severity="success" icon="pi pi-verified" />
                   )}
                   {selectedProvider.stripeAccountId && (
@@ -290,7 +293,7 @@ export default function AdminProviders() {
             </div>
 
             <div className="flex gap-2 justify-content-end">
-              {!selectedProvider.verified && (
+              {!selectedProvider.isVerified && (
                 <Button
                   label="Verify Provider"
                   icon="pi pi-verified"
@@ -300,15 +303,17 @@ export default function AdminProviders() {
                   }}
                 />
               )}
-              <Button
-                label="Suspend"
-                icon="pi pi-ban"
-                className="p-button-danger p-button-outlined"
-                onClick={() => {
-                  handleSuspend(selectedProvider);
-                  setDetailsVisible(false);
-                }}
-              />
+              {selectedProvider.isVerified && (
+                <Button
+                  label="Unverify"
+                  icon="pi pi-ban"
+                  className="p-button-danger p-button-outlined"
+                  onClick={() => {
+                    handleSuspend(selectedProvider);
+                    setDetailsVisible(false);
+                  }}
+                />
+              )}
             </div>
           </div>
         )}

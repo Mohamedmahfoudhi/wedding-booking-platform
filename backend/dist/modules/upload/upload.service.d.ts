@@ -1,6 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 export declare class UploadService {
     private readonly configService;
+    private readonly useLocalStorage;
+    private readonly localUploadDir;
+    private readonly publicBaseUrl;
     constructor(configService: ConfigService);
     uploadImage(file: Express.Multer.File, folder?: string): Promise<{
         url: string;
@@ -19,4 +22,6 @@ export declare class UploadService {
         apiKey: string;
         folder: string;
     };
+    private saveToLocalDisk;
+    private uploadToCloudinary;
 }

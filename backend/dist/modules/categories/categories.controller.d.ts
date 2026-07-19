@@ -5,7 +5,9 @@ export declare class CategoriesController {
     private readonly categoriesService;
     constructor(categoriesService: CategoriesService);
     findAll(): Promise<{
-        categories: import("../../database/entities").Category[];
+        categories: (import("../../database/entities").Category & {
+            serviceCount: number;
+        })[];
     }>;
     findBySlug(slug: string): Promise<{
         category: import("../../database/entities").Category;

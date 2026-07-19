@@ -6,7 +6,9 @@ export declare class CategoriesService {
     private readonly categoryRepository;
     constructor(categoryRepository: Repository<Category>);
     create(createDto: CreateCategoryDto): Promise<Category>;
-    findAll(activeOnly?: boolean): Promise<Category[]>;
+    findAll(activeOnly?: boolean): Promise<(Category & {
+        serviceCount: number;
+    })[]>;
     findBySlug(slug: string): Promise<Category>;
     findById(id: string): Promise<Category>;
     update(id: string, updateDto: UpdateCategoryDto): Promise<Category>;

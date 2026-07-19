@@ -20,6 +20,9 @@ export declare class AvailabilityController {
     checkAvailability(serviceId: string, date: string, startTime?: string, endTime?: string): Promise<{
         available: boolean;
     }>;
+    getPublicBlockedDates(serviceId: string, start?: string, end?: string): Promise<{
+        blockedDates: import("../../database/entities").BlockedDate[];
+    }>;
 }
 export declare class ProviderAvailabilityController {
     private readonly availabilityService;

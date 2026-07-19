@@ -91,6 +91,10 @@ __decorate([
     __metadata("design:type", Number)
 ], Service.prototype, "capacityMax", void 0);
 __decorate([
+    (0, typeorm_1.Column)({ length: 100, nullable: true }),
+    __metadata("design:type", String)
+], Service.prototype, "location", void 0);
+__decorate([
     (0, typeorm_1.Column)({ name: 'is_active', default: true }),
     __metadata("design:type", Boolean)
 ], Service.prototype, "isActive", void 0);

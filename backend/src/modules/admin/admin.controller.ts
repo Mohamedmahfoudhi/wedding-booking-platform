@@ -36,7 +36,8 @@ export class AdminController {
 
   @Get('dashboard/revenue')
   @ApiOperation({ summary: 'Get revenue chart data' })
-  async getRevenueChart(@Query('months') months = 12) {
+  async getRevenueChart(@Query('months') monthsParam = '12') {
+    const months = parseInt(monthsParam, 10) || 12;
     const data = await this.adminService.getRevenueChart(months);
     return { data };
   }
@@ -45,11 +46,20 @@ export class AdminController {
   @Get('users')
   @ApiOperation({ summary: 'List all users' })
   async getUsers(
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
-    @Query('role') role?: UserRole,
+    @Query('page') pageParam = '1',
+    @Query('limit') limitParam = '10',
+    @Query('role') roleParam?: string,
     @Query('search') search?: string,
   ) {
+    const page = parseInt(pageParam, 10) || 1;
+    const limit = parseInt(limitParam, 10) || 10;
+
+    // Only use role if it's a valid enum value
+    const validRoles = Object.values(UserRole);
+    const role = roleParam && validRoles.includes(roleParam as UserRole)
+      ? (roleParam as UserRole)
+      : undefined;
+
     const { users, total } = await this.adminService.getUsers(
       page,
       limit,
@@ -89,15 +99,19 @@ export class AdminController {
   @Get('providers')
   @ApiOperation({ summary: 'List all providers' })
   async getProviders(
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
-    @Query('verified') verified?: boolean,
+    @Query('page') pageParam = '1',
+    @Query('limit') limitParam = '10',
+    @Query('verified') verified?: string,
     @Query('search') search?: string,
   ) {
+    const page = parseInt(pageParam, 10) || 1;
+    const limit = parseInt(limitParam, 10) || 10;
+    const isVerified = verified === 'true' ? true : verified === 'false' ? false : undefined;
+
     const { providers, total } = await this.adminService.getProviders(
       page,
       limit,
-      verified,
+      isVerified,
       search,
     );
 
@@ -138,16 +152,21 @@ export class AdminController {
   @Get('services')
   @ApiOperation({ summary: 'List all services' })
   async getServices(
-    @Query('page') page = 1,
-    @Query('limit') limit = 10,
+    @Query('page') pageParam = '1',
+    @Query('limit') limitParam = '10',
     @Query('status') status?: ServiceStatus,
     @Query('categoryId') categoryId?: string,
+    @Query('category') categorySlug?: string,
   ) {
+    const page = parseInt(pageParam, 10) || 1;
+    const limit = parseInt(limitParam, 10) || 10;
+
     const { services, total } = await this.adminService.getServices(
       page,
       limit,
       status,
       categoryId,
+      categorySlug,
     );
 
     return {
@@ -189,6 +208,21 @@ export class AdminController {
   ) {
     const service = await this.adminService.featureService(id, body.featured);
     return { message: 'Service updated', service };
+  }
+
+  @Patch('services/:id/toggle-featured')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Toggle service featured status' })
+  async toggleFeatured(@Param('id') id: string) {
+    const service = await this.adminService.toggleFeatured(id);
+    return { message: 'Service updated', service };
+  }
+
+  @Delete('services/:id')
+  @ApiOperation({ summary: 'Delete service' })
+  async deleteService(@Param('id') id: string) {
+    await this.adminService.deleteService(id);
+    return { message: 'Service deleted' };
   }
 
   // Reviews

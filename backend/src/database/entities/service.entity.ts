@@ -75,6 +75,9 @@ export class Service {
   @Column({ name: 'capacity_max', nullable: true })
   capacityMax: number;
 
+  @Column({ length: 100, nullable: true })
+  location: string;
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 

@@ -38,14 +38,25 @@ export class CategoriesService {
     return this.categoryRepository.save(category);
   }
 
-  async findAll(activeOnly = true): Promise<Category[]> {
-    const query = this.categoryRepository.createQueryBuilder('category');
+  async findAll(activeOnly = true): Promise<(Category & { serviceCount: number })[]> {
+    const query = this.categoryRepository
+      .createQueryBuilder('category')
+      .loadRelationCountAndMap(
+        'category.serviceCount',
+        'category.services',
+        'service',
+        (qb) =>
+          qb.where('service.status = :status AND service.isActive = :isActive', {
+            status: 'approved',
+            isActive: true,
+          }),
+      );
 
     if (activeOnly) {
       query.where('category.isActive = :isActive', { isActive: true });
     }
 
-    return query.orderBy('category.displayOrder', 'ASC').getMany();
+    return query.orderBy('category.displayOrder', 'ASC').getMany() as Promise<(Category & { serviceCount: number })[]>;
   }
 
   async findBySlug(slug: string): Promise<Category> {

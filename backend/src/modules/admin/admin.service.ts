@@ -212,19 +212,25 @@ export class AdminService {
     limit = 10,
     status?: ServiceStatus,
     categoryId?: string,
+    categorySlug?: string,
   ): Promise<{ services: Service[]; total: number }> {
     const query = this.serviceRepository.createQueryBuilder('service')
       .leftJoinAndSelect('service.provider', 'provider')
       .leftJoinAndSelect('provider.user', 'user')
       .leftJoinAndSelect('service.category', 'category')
-      .leftJoinAndSelect('service.images', 'images');
+      .leftJoinAndSelect('service.images', 'images')
+      .leftJoinAndSelect('service.packages', 'packages');
 
     if (status) {
-      query.where('service.status = :status', { status });
+      query.andWhere('service.status = :status', { status });
     }
 
     if (categoryId) {
       query.andWhere('service.categoryId = :categoryId', { categoryId });
+    }
+
+    if (categorySlug) {
+      query.andWhere('category.slug = :categorySlug', { categorySlug });
     }
 
     const [services, total] = await query
@@ -266,6 +272,24 @@ export class AdminService {
 
     service.isFeatured = featured;
     return this.serviceRepository.save(service);
+  }
+
+  async toggleFeatured(id: string): Promise<Service> {
+    const service = await this.serviceRepository.findOne({ where: { id } });
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+
+    service.isFeatured = !service.isFeatured;
+    return this.serviceRepository.save(service);
+  }
+
+  async deleteService(id: string): Promise<void> {
+    const service = await this.serviceRepository.findOne({ where: { id } });
+    if (!service) {
+      throw new NotFoundException('Service not found');
+    }
+    await this.serviceRepository.remove(service);
   }
 
   // Reviews management

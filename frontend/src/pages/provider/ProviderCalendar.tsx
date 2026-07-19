@@ -8,7 +8,7 @@ import { Toast } from 'primereact/toast';
 import { Checkbox } from 'primereact/checkbox';
 import { Skeleton } from 'primereact/skeleton';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
-import { availabilityApi, servicesApi, bookingsApi } from '../../api/client';
+import { availabilityApi, providerServicesApi, providerBookingsApi } from '../../api/client';
 import { Service, Booking } from '../../types';
 
 interface BlockedDate {
@@ -40,12 +40,12 @@ export default function ProviderCalendar() {
 
   useEffect(() => {
     loadCalendarData();
-  }, [selectedService, selectedMonth]);
+  }, [selectedService, selectedMonth, services]);
 
   const loadServices = async () => {
     try {
-      const response = await servicesApi.getMyServices();
-      setServices(response.data.data || response.data);
+      const response = await providerServicesApi.getAll();
+      setServices(response.data.data?.services || []);
     } catch (error) {
       console.error('Failed to load services', error);
     }
@@ -56,29 +56,44 @@ export default function ProviderCalendar() {
     try {
       const startDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth(), 1);
       const endDate = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 0);
+      const startIso = startDate.toISOString();
+      const endIso = endDate.toISOString();
 
-      const [blockedRes, bookingsRes] = await Promise.all([
-        availabilityApi.getBlockedDates(selectedService || undefined, {
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-        }),
-        bookingsApi.getProviderBookings({
-          startDate: startDate.toISOString(),
-          endDate: endDate.toISOString(),
-          serviceId: selectedService || undefined,
-        }),
+      // Which services to query blocks for.
+      const targetServiceIds = selectedService
+        ? [selectedService]
+        : services.map((s) => s.id);
+
+      const serviceNameById = new Map(services.map((s) => [s.id, s.name]));
+
+      const [blockedResponses, bookingsRes] = await Promise.all([
+        Promise.all(
+          targetServiceIds.map((sid) =>
+            availabilityApi
+              .getBlockedDates(sid, startIso, endIso)
+              .then((res) => ({ sid, res }))
+              .catch(() => ({ sid, res: null as any })),
+          ),
+        ),
+        providerBookingsApi.getCalendar(startIso, endIso),
       ]);
 
-      setBlockedDates(
-        (blockedRes.data || []).map((d: any) => ({
-          id: d.id,
-          date: new Date(d.date),
-          serviceId: d.serviceId,
-          serviceName: d.service?.name,
-          reason: d.reason,
-        }))
-      );
-      setBookings(bookingsRes.data.data || bookingsRes.data);
+      const allBlocked: BlockedDate[] = [];
+      blockedResponses.forEach(({ sid, res }) => {
+        const list =
+          res?.data?.data?.blockedDates || res?.data?.blockedDates || [];
+        list.forEach((d: any) => {
+          allBlocked.push({
+            id: d.id,
+            date: new Date(d.date),
+            serviceId: d.serviceId ?? sid,
+            serviceName: d.service?.name ?? serviceNameById.get(sid),
+            reason: d.reason,
+          });
+        });
+      });
+      setBlockedDates(allBlocked);
+      setBookings(bookingsRes.data.data?.events || bookingsRes.data.data?.bookings || []);
     } catch (error) {
       console.error('Failed to load calendar data', error);
     } finally {
@@ -102,13 +117,32 @@ export default function ProviderCalendar() {
       const endDate = dateRange[1] || dateRange[0];
 
       for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-        dates.push(new Date(d).toISOString().split('T')[0]);
+        // Use local components — toISOString() shifts the day in non-UTC zones.
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        dates.push(`${y}-${m}-${day}`);
       }
 
-      await availabilityApi.blockDates({
-        dates,
-        serviceId: blockAllServices ? undefined : selectedService,
-      });
+      const targets = blockAllServices
+        ? services.map((s) => s.id)
+        : selectedService
+          ? [selectedService]
+          : [];
+
+      if (targets.length === 0) {
+        toast.current?.show({
+          severity: 'warn',
+          summary: 'Select a service',
+          detail: 'Pick a service or enable "Block for all services"',
+        });
+        return;
+      }
+
+      const payload = dates.map((date) => ({ date }));
+      await Promise.all(
+        targets.map((sid) => availabilityApi.blockDates(sid, payload)),
+      );
 
       toast.current?.show({
         severity: 'success',
@@ -135,7 +169,8 @@ export default function ProviderCalendar() {
       icon: 'pi pi-calendar',
       accept: async () => {
         try {
-          await availabilityApi.unblockDate(blockedDate.id);
+          if (!blockedDate.serviceId) return;
+          await availabilityApi.unblockDate(blockedDate.serviceId, blockedDate.id);
           toast.current?.show({
             severity: 'success',
             summary: 'Success',
@@ -153,13 +188,24 @@ export default function ProviderCalendar() {
     });
   };
 
+  // Format a Date or ISO/date string as "YYYY-MM-DD" using local components.
+  // Using toISOString() would shift the day for any non-UTC timezone.
+  const toLocalKey = (input: Date | string): string => {
+    const d = input instanceof Date ? input : new Date(input);
+    // If the input was a plain "YYYY-MM-DD" string, new Date() parses it as
+    // UTC midnight — read the UTC components in that case to avoid shifting.
+    const plain = typeof input === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(input);
+    const y = plain ? d.getUTCFullYear() : d.getFullYear();
+    const m = plain ? d.getUTCMonth() : d.getMonth();
+    const day = plain ? d.getUTCDate() : d.getDate();
+    return `${y}-${String(m + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  };
+
   const getDateInfo = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0];
-    const blocked = blockedDates.find(
-      (b) => b.date.toISOString().split('T')[0] === dateStr
-    );
+    const dateStr = toLocalKey(date);
+    const blocked = blockedDates.find((b) => toLocalKey(b.date) === dateStr);
     const dayBookings = bookings.filter(
-      (b) => new Date(b.eventDate).toISOString().split('T')[0] === dateStr
+      (b) => toLocalKey(b.eventDate as unknown as string) === dateStr,
     );
     return { blocked, bookings: dayBookings };
   };
@@ -175,10 +221,6 @@ export default function ProviderCalendar() {
         style={{ minHeight: '40px' }}
       >
         <span>{date.day}</span>
-        {dayBookings.length > 0 && (
-          <span className="text-xs text-green-700">{dayBookings.length} booking(s)</span>
-        )}
-        {blocked && <span className="text-xs text-red-700">Blocked</span>}
       </div>
     );
   };
@@ -234,6 +276,7 @@ export default function ProviderCalendar() {
               inline
               className="w-full"
               dateTemplate={dateTemplate}
+              viewDate={selectedMonth}
               onViewDateChange={(e) => setSelectedMonth(e.value as Date)}
             />
 

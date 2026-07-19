@@ -21,6 +21,12 @@ __decorate([
     __metadata("design:type", String)
 ], CreateCategoryDto.prototype, "name", void 0);
 __decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: 'salles-des-fetes' }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateCategoryDto.prototype, "slug", void 0);
+__decorate([
     (0, swagger_1.ApiPropertyOptional)({ example: 'قاعات الأفراح' }),
     (0, class_validator_1.IsString)(),
     (0, class_validator_1.IsOptional)(),

@@ -4,10 +4,35 @@ import {
   IsOptional,
   IsEnum,
   IsUUID,
+  IsArray,
+  ValidateNested,
   Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { PriceType } from '../../../database/entities/service.entity';
+
+export class ServiceImageDto {
+  @IsString()
+  url: string;
+
+  @IsString()
+  @IsOptional()
+  publicId?: string;
+}
+
+export class ServicePackageDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsNumber()
+  @Min(0)
+  price: number;
+}
 
 export class CreateServiceDto {
   @ApiProperty({ example: 'Elegant Wedding Venue' })
@@ -55,4 +80,23 @@ export class CreateServiceDto {
   @Min(0)
   @IsOptional()
   capacityMax?: number;
+
+  @ApiPropertyOptional({ example: 'Tunis' })
+  @IsString()
+  @IsOptional()
+  location?: string;
+
+  @ApiPropertyOptional({ type: [ServiceImageDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ServiceImageDto)
+  @IsOptional()
+  images?: ServiceImageDto[];
+
+  @ApiPropertyOptional({ type: [ServicePackageDto] })
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ServicePackageDto)
+  @IsOptional()
+  packages?: ServicePackageDto[];
 }

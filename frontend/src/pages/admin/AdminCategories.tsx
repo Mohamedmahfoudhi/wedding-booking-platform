@@ -46,7 +46,7 @@ export default function AdminCategories() {
   const loadCategories = async () => {
     try {
       const response = await categoriesApi.getAll();
-      setCategories(response.data);
+      setCategories(response.data.data?.categories || []);
     } catch (error) {
       console.error('Failed to load categories', error);
     } finally {
@@ -117,7 +117,10 @@ export default function AdminCategories() {
   const handleImageUpload = async (event: FileUploadHandlerEvent) => {
     try {
       const response = await uploadApi.upload(event.files[0]);
-      setFormData((prev) => ({ ...prev, image: response.data.url }));
+      setFormData((prev) => ({
+        ...prev,
+        image: response.data.data?.url ?? response.data.url,
+      }));
       toast.current?.show({
         severity: 'success',
         summary: 'Uploaded',

@@ -28,7 +28,15 @@ export default function HomePage() {
         servicesApi.getFeatured(6),
       ]);
       setCategories(categoriesRes.data?.data?.categories || categoriesRes.data?.categories || []);
-      setFeaturedServices(servicesRes.data?.data?.services || servicesRes.data?.services || []);
+
+      // Use featured services, or fall back to regular search if none are featured
+      let services = servicesRes.data?.data?.services || servicesRes.data?.services || [];
+      if (services.length === 0) {
+        // No featured services, fetch recent approved services instead
+        const fallbackRes = await servicesApi.search({ limit: 6 });
+        services = fallbackRes.data?.data?.services || fallbackRes.data?.services || [];
+      }
+      setFeaturedServices(services);
     } catch (error) {
       console.error('Failed to load data', error);
     } finally {
@@ -175,7 +183,7 @@ export default function HomePage() {
                         <span className="text-xs surface-200 border-round px-2 py-1">
                           {service.category?.name}
                         </span>
-                        {service.featured && (
+                        {service.isFeatured && (
                           <span className="text-xs bg-yellow-100 text-yellow-800 border-round px-2 py-1">
                             Featured
                           </span>

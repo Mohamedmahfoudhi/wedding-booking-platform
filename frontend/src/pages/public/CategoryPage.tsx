@@ -41,23 +41,40 @@ export default function CategoryPage() {
   const loadCategory = async () => {
     try {
       const response = await categoriesApi.getBySlug(slug!);
-      setCategory(response.data);
+      setCategory(response.data.data?.category || null);
     } catch (error) {
       console.error('Failed to load category', error);
+    }
+  };
+
+  const mapSort = (
+    value: string,
+  ): { sortBy?: string; sortOrder?: 'asc' | 'desc' } => {
+    switch (value) {
+      case 'price_asc':
+        return { sortBy: 'price', sortOrder: 'asc' };
+      case 'price_desc':
+        return { sortBy: 'price', sortOrder: 'desc' };
+      case 'rating':
+        return { sortBy: 'rating', sortOrder: 'desc' };
+      case 'newest':
+        return { sortBy: 'newest', sortOrder: 'desc' };
+      default:
+        return { sortBy: 'reviews', sortOrder: 'desc' };
     }
   };
 
   const loadServices = async () => {
     setLoading(true);
     try {
-      const response = await servicesApi.getAll({
+      const response = await servicesApi.search({
         category: slug,
         page,
         limit: rows,
-        sort: sortBy,
+        ...mapSort(sortBy),
       });
-      setServices(response.data.data || response.data);
-      setTotalRecords(response.data.total || response.data.length);
+      setServices(response.data.data?.services || []);
+      setTotalRecords(response.data.data?.meta?.total || 0);
     } catch (error) {
       console.error('Failed to load services', error);
     } finally {

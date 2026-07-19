@@ -55,9 +55,10 @@ export default function ClientMessages() {
   const loadConversations = async () => {
     try {
       const response = await messagesApi.getConversations();
-      setConversations(response.data.data || response.data);
-      if (!selectedConversation && (response.data.data || response.data).length > 0) {
-        setSelectedConversation((response.data.data || response.data)[0]);
+      const list: Conversation[] = response.data.data?.conversations || [];
+      setConversations(list);
+      if (!selectedConversation && list.length > 0) {
+        setSelectedConversation(list[0]);
       }
     } catch (error) {
       console.error('Failed to load conversations', error);
@@ -69,8 +70,7 @@ export default function ClientMessages() {
   const loadMessages = async (conversationId: string) => {
     try {
       const response = await messagesApi.getMessages(conversationId);
-      setMessages(response.data.data || response.data);
-      // Mark as read
+      setMessages(response.data.data?.messages || []);
       await messagesApi.markAsRead(conversationId);
     } catch (error) {
       console.error('Failed to load messages', error);
@@ -79,8 +79,10 @@ export default function ClientMessages() {
 
   const startNewConversation = async (providerId: string) => {
     try {
-      const response = await messagesApi.createConversation(providerId);
-      const newConversation = response.data;
+      const response = await messagesApi.startConversation(providerId);
+      const newConversation: Conversation | undefined =
+        response.data.data?.conversation;
+      if (!newConversation) return;
       setConversations([newConversation, ...conversations]);
       setSelectedConversation(newConversation);
     } catch (error) {
@@ -94,7 +96,8 @@ export default function ClientMessages() {
     setSendingMessage(true);
     try {
       const response = await messagesApi.sendMessage(selectedConversation.id, newMessage);
-      setMessages([...messages, response.data]);
+      const sent: Message | undefined = response.data.data?.message;
+      if (sent) setMessages([...messages, sent]);
       setNewMessage('');
     } catch (error) {
       toast.current?.show({
@@ -129,8 +132,22 @@ export default function ClientMessages() {
     return d.toLocaleDateString();
   };
 
-  const getOtherParticipant = (conversation: Conversation) => {
-    return conversation.provider?.id === user?.id ? conversation.client : conversation.provider;
+  const getOtherParticipantDisplay = (conversation: Conversation) => {
+    const isClient = conversation.client?.id === user?.id;
+    if (isClient) {
+      const p = conversation.provider;
+      const name = p?.businessName || `${p?.user?.firstName ?? ''} ${p?.user?.lastName ?? ''}`.trim();
+      return {
+        name: name || 'Provider',
+        initial: (p?.businessName?.charAt(0) || p?.user?.firstName?.charAt(0) || 'P').toUpperCase(),
+      };
+    }
+    const c = conversation.client;
+    const name = `${c?.firstName ?? ''} ${c?.lastName ?? ''}`.trim();
+    return {
+      name: name || 'Client',
+      initial: (c?.firstName?.charAt(0) || 'C').toUpperCase(),
+    };
   };
 
   if (loading) {
@@ -174,7 +191,7 @@ export default function ClientMessages() {
               ) : (
                 <div className="flex flex-column gap-2">
                   {conversations.map((conversation) => {
-                    const other = getOtherParticipant(conversation);
+                    const other = getOtherParticipantDisplay(conversation);
                     const isSelected = selectedConversation?.id === conversation.id;
                     return (
                       <div
@@ -185,29 +202,22 @@ export default function ClientMessages() {
                         onClick={() => setSelectedConversation(conversation)}
                       >
                         <Avatar
-                          label={other?.firstName?.charAt(0) || 'U'}
+                          label={other.initial}
                           shape="circle"
                           size="large"
                           className="bg-primary text-white"
                         />
                         <div className="flex-grow-1 overflow-hidden">
                           <div className="flex justify-content-between">
-                            <span className="font-medium">
-                              {other?.firstName} {other?.lastName}
-                            </span>
+                            <span className="font-medium">{other.name}</span>
                             <span className="text-xs text-color-secondary">
-                              {conversation.lastMessage && formatDate(conversation.lastMessage.createdAt)}
+                              {conversation.lastMessageAt && formatDate(conversation.lastMessageAt)}
                             </span>
                           </div>
                           <p className="text-sm text-color-secondary m-0 white-space-nowrap overflow-hidden text-overflow-ellipsis">
-                            {conversation.lastMessage?.content || 'No messages yet'}
+                            {conversation.service?.name || 'General inquiry'}
                           </p>
                         </div>
-                        {conversation.unreadCount > 0 && (
-                          <span className="w-1rem h-1rem border-circle bg-primary flex align-items-center justify-content-center text-xs text-white">
-                            {conversation.unreadCount}
-                          </span>
-                        )}
                       </div>
                     );
                   })}
@@ -224,14 +234,13 @@ export default function ClientMessages() {
                   {/* Header */}
                   <div className="flex align-items-center gap-3 pb-3 border-bottom-1 surface-border">
                     <Avatar
-                      label={getOtherParticipant(selectedConversation)?.firstName?.charAt(0) || 'U'}
+                      label={getOtherParticipantDisplay(selectedConversation).initial}
                       shape="circle"
                       className="bg-primary text-white"
                     />
                     <div>
                       <p className="font-medium m-0">
-                        {getOtherParticipant(selectedConversation)?.firstName}{' '}
-                        {getOtherParticipant(selectedConversation)?.lastName}
+                        {getOtherParticipantDisplay(selectedConversation).name}
                       </p>
                       <p className="text-sm text-color-secondary m-0">
                         {selectedConversation.service?.name || 'General inquiry'}

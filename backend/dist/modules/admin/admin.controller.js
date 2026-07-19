@@ -29,11 +29,18 @@ let AdminController = class AdminController {
         const stats = await this.adminService.getDashboardStats();
         return { stats };
     }
-    async getRevenueChart(months = 12) {
+    async getRevenueChart(monthsParam = '12') {
+        const months = parseInt(monthsParam, 10) || 12;
         const data = await this.adminService.getRevenueChart(months);
         return { data };
     }
-    async getUsers(page = 1, limit = 10, role, search) {
+    async getUsers(pageParam = '1', limitParam = '10', roleParam, search) {
+        const page = parseInt(pageParam, 10) || 1;
+        const limit = parseInt(limitParam, 10) || 10;
+        const validRoles = Object.values(user_entity_1.UserRole);
+        const role = roleParam && validRoles.includes(roleParam)
+            ? roleParam
+            : undefined;
         const { users, total } = await this.adminService.getUsers(page, limit, role, search);
         return {
             users,
@@ -53,8 +60,11 @@ let AdminController = class AdminController {
         await this.adminService.deleteUser(id);
         return { message: 'User deleted' };
     }
-    async getProviders(page = 1, limit = 10, verified, search) {
-        const { providers, total } = await this.adminService.getProviders(page, limit, verified, search);
+    async getProviders(pageParam = '1', limitParam = '10', verified, search) {
+        const page = parseInt(pageParam, 10) || 1;
+        const limit = parseInt(limitParam, 10) || 10;
+        const isVerified = verified === 'true' ? true : verified === 'false' ? false : undefined;
+        const { providers, total } = await this.adminService.getProviders(page, limit, isVerified, search);
         return {
             providers,
             meta: {
@@ -73,8 +83,10 @@ let AdminController = class AdminController {
         const provider = await this.adminService.featureProvider(id, body.featured);
         return { message: 'Provider updated', provider };
     }
-    async getServices(page = 1, limit = 10, status, categoryId) {
-        const { services, total } = await this.adminService.getServices(page, limit, status, categoryId);
+    async getServices(pageParam = '1', limitParam = '10', status, categoryId, categorySlug) {
+        const page = parseInt(pageParam, 10) || 1;
+        const limit = parseInt(limitParam, 10) || 10;
+        const { services, total } = await this.adminService.getServices(page, limit, status, categoryId, categorySlug);
         return {
             services,
             meta: {
@@ -96,6 +108,14 @@ let AdminController = class AdminController {
     async featureService(id, body) {
         const service = await this.adminService.featureService(id, body.featured);
         return { message: 'Service updated', service };
+    }
+    async toggleFeatured(id) {
+        const service = await this.adminService.toggleFeatured(id);
+        return { message: 'Service updated', service };
+    }
+    async deleteService(id) {
+        await this.adminService.deleteService(id);
+        return { message: 'Service deleted' };
     }
     async getReviews(page = 1, limit = 10) {
         const { reviews, total } = await this.adminService.getReviews(page, limit);
@@ -170,7 +190,7 @@ __decorate([
     __param(2, (0, common_1.Query)('verified')),
     __param(3, (0, common_1.Query)('search')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, Boolean, String]),
+    __metadata("design:paramtypes", [Object, Object, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "getProviders", null);
 __decorate([
@@ -200,8 +220,9 @@ __decorate([
     __param(1, (0, common_1.Query)('limit')),
     __param(2, (0, common_1.Query)('status')),
     __param(3, (0, common_1.Query)('categoryId')),
+    __param(4, (0, common_1.Query)('category')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object, String, String]),
+    __metadata("design:paramtypes", [Object, Object, String, String, String]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "getServices", null);
 __decorate([
@@ -233,6 +254,23 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], AdminController.prototype, "featureService", null);
+__decorate([
+    (0, common_1.Patch)('services/:id/toggle-featured'),
+    (0, common_1.HttpCode)(common_1.HttpStatus.OK),
+    (0, swagger_1.ApiOperation)({ summary: 'Toggle service featured status' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "toggleFeatured", null);
+__decorate([
+    (0, common_1.Delete)('services/:id'),
+    (0, swagger_1.ApiOperation)({ summary: 'Delete service' }),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", Promise)
+], AdminController.prototype, "deleteService", null);
 __decorate([
     (0, common_1.Get)('reviews'),
     (0, swagger_1.ApiOperation)({ summary: 'List all reviews' }),

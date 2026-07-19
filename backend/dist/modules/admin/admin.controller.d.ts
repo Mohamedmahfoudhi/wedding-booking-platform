@@ -16,13 +16,13 @@ export declare class AdminController {
             monthlyRevenue: number;
         };
     }>;
-    getRevenueChart(months?: number): Promise<{
+    getRevenueChart(monthsParam?: string): Promise<{
         data: {
             month: string;
             revenue: number;
         }[];
     }>;
-    getUsers(page?: number, limit?: number, role?: UserRole, search?: string): Promise<{
+    getUsers(pageParam?: string, limitParam?: string, roleParam?: string, search?: string): Promise<{
         users: import("../../database/entities/user.entity").User[];
         meta: {
             page: number;
@@ -41,7 +41,7 @@ export declare class AdminController {
     deleteUser(id: string): Promise<{
         message: string;
     }>;
-    getProviders(page?: number, limit?: number, verified?: boolean, search?: string): Promise<{
+    getProviders(pageParam?: string, limitParam?: string, verified?: string, search?: string): Promise<{
         providers: import("../../database/entities").ProviderProfile[];
         meta: {
             page: number;
@@ -62,7 +62,7 @@ export declare class AdminController {
         message: string;
         provider: import("../../database/entities").ProviderProfile;
     }>;
-    getServices(page?: number, limit?: number, status?: ServiceStatus, categoryId?: string): Promise<{
+    getServices(pageParam?: string, limitParam?: string, status?: ServiceStatus, categoryId?: string, categorySlug?: string): Promise<{
         services: import("../../database/entities/service.entity").Service[];
         meta: {
             page: number;
@@ -86,6 +86,13 @@ export declare class AdminController {
     }): Promise<{
         message: string;
         service: import("../../database/entities/service.entity").Service;
+    }>;
+    toggleFeatured(id: string): Promise<{
+        message: string;
+        service: import("../../database/entities/service.entity").Service;
+    }>;
+    deleteService(id: string): Promise<{
+        message: string;
     }>;
     getReviews(page?: number, limit?: number): Promise<{
         reviews: import("../../database/entities").Review[];

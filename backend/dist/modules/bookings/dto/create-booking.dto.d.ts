@@ -2,7 +2,7 @@ export declare class CreateBookingDto {
     serviceId: string;
     packageId?: string;
     clientId?: string;
-    eventDate: Date;
+    eventDate: string;
     startTime?: string;
     endTime?: string;
     guestCount?: number;

@@ -23,7 +23,7 @@ export default function PublicLayout() {
   const loadCounts = async () => {
     try {
       const response = await notificationsApi.getUnreadCount();
-      setNotificationCount(response.data.count);
+      setNotificationCount(response.data.data?.count ?? 0);
     } catch (error) {
       console.error('Failed to load notification count');
     }

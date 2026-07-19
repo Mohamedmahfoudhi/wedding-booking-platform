@@ -13,16 +13,77 @@ exports.UploadService = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const cloudinary_1 = require("cloudinary");
+const fs_1 = require("fs");
+const path_1 = require("path");
+const crypto_1 = require("crypto");
 let UploadService = class UploadService {
     constructor(configService) {
         this.configService = configService;
-        cloudinary_1.v2.config({
-            cloud_name: this.configService.get('CLOUDINARY_CLOUD_NAME'),
-            api_key: this.configService.get('CLOUDINARY_API_KEY'),
-            api_secret: this.configService.get('CLOUDINARY_API_SECRET'),
-        });
+        this.useLocalStorage =
+            this.configService.get('NODE_ENV') !== 'production';
+        this.localUploadDir = (0, path_1.join)(process.cwd(), 'uploads');
+        const port = this.configService.get('PORT') || 3000;
+        this.publicBaseUrl =
+            this.configService.get('PUBLIC_BASE_URL') || `http://localhost:${port}`;
+        if (!this.useLocalStorage) {
+            cloudinary_1.v2.config({
+                cloud_name: this.configService.get('CLOUDINARY_CLOUD_NAME'),
+                api_key: this.configService.get('CLOUDINARY_API_KEY'),
+                api_secret: this.configService.get('CLOUDINARY_API_SECRET'),
+            });
+        }
     }
     async uploadImage(file, folder = 'wedding-platform') {
+        if (!file) {
+            throw new common_1.BadRequestException('No file provided');
+        }
+        if (this.useLocalStorage) {
+            return this.saveToLocalDisk(file, folder);
+        }
+        return this.uploadToCloudinary(file, folder);
+    }
+    async uploadImages(files, folder = 'wedding-platform') {
+        return Promise.all(files.map((file) => this.uploadImage(file, folder)));
+    }
+    async deleteImage(publicId) {
+        if (this.useLocalStorage) {
+            const filePath = (0, path_1.join)(this.localUploadDir, publicId);
+            await fs_1.promises.unlink(filePath).catch(() => undefined);
+            return;
+        }
+        await cloudinary_1.v2.uploader.destroy(publicId);
+    }
+    async deleteImages(publicIds) {
+        await Promise.all(publicIds.map((id) => this.deleteImage(id)));
+    }
+    getSignedUploadParams(folder = 'wedding-platform') {
+        if (this.useLocalStorage) {
+            throw new common_1.BadRequestException('Signed uploads are not available in local storage mode');
+        }
+        const timestamp = Math.round(Date.now() / 1000);
+        const signature = cloudinary_1.v2.utils.api_sign_request({ timestamp, folder }, this.configService.get('CLOUDINARY_API_SECRET') || '');
+        return {
+            timestamp,
+            signature,
+            cloudName: this.configService.get('CLOUDINARY_CLOUD_NAME') || '',
+            apiKey: this.configService.get('CLOUDINARY_API_KEY') || '',
+            folder,
+        };
+    }
+    async saveToLocalDisk(file, folder) {
+        const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, '_');
+        const dir = (0, path_1.join)(this.localUploadDir, safeFolder);
+        await fs_1.promises.mkdir(dir, { recursive: true });
+        const ext = (0, path_1.extname)(file.originalname) || '.bin';
+        const filename = `${(0, crypto_1.randomUUID)()}${ext}`;
+        const relPath = `${safeFolder}/${filename}`;
+        await fs_1.promises.writeFile((0, path_1.join)(dir, filename), file.buffer);
+        return {
+            url: `${this.publicBaseUrl}/uploads/${relPath}`,
+            publicId: relPath,
+        };
+    }
+    uploadToCloudinary(file, folder) {
         return new Promise((resolve, reject) => {
             const uploadStream = cloudinary_1.v2.uploader.upload_stream({
                 folder,
@@ -45,26 +106,6 @@ let UploadService = class UploadService {
             });
             uploadStream.end(file.buffer);
         });
-    }
-    async uploadImages(files, folder = 'wedding-platform') {
-        return Promise.all(files.map((file) => this.uploadImage(file, folder)));
-    }
-    async deleteImage(publicId) {
-        await cloudinary_1.v2.uploader.destroy(publicId);
-    }
-    async deleteImages(publicIds) {
-        await Promise.all(publicIds.map((id) => this.deleteImage(id)));
-    }
-    getSignedUploadParams(folder = 'wedding-platform') {
-        const timestamp = Math.round(Date.now() / 1000);
-        const signature = cloudinary_1.v2.utils.api_sign_request({ timestamp, folder }, this.configService.get('CLOUDINARY_API_SECRET') || '');
-        return {
-            timestamp,
-            signature,
-            cloudName: this.configService.get('CLOUDINARY_CLOUD_NAME') || '',
-            apiKey: this.configService.get('CLOUDINARY_API_KEY') || '',
-            folder,
-        };
     }
 };
 exports.UploadService = UploadService;

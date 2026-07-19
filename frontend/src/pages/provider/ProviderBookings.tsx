@@ -11,7 +11,7 @@ import { TabView, TabPanel } from 'primereact/tabview';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { Skeleton } from 'primereact/skeleton';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
-import { bookingsApi } from '../../api/client';
+import { providerBookingsApi } from '../../api/client';
 import { Booking, BookingStatus } from '../../types';
 
 export default function ProviderBookings() {
@@ -42,8 +42,8 @@ export default function ProviderBookings() {
 
   const loadBookings = async () => {
     try {
-      const response = await bookingsApi.getProviderBookings();
-      setBookings(response.data.data || response.data);
+      const response = await providerBookingsApi.getAll();
+      setBookings(response.data.data?.bookings || []);
     } catch (error) {
       console.error('Failed to load bookings', error);
       toast.current?.show({
@@ -59,7 +59,7 @@ export default function ProviderBookings() {
   const handleConfirm = async (booking: Booking) => {
     setProcessing(true);
     try {
-      await bookingsApi.confirm(booking.id);
+      await providerBookingsApi.confirm(booking.id);
       toast.current?.show({
         severity: 'success',
         summary: 'Confirmed',
@@ -83,7 +83,7 @@ export default function ProviderBookings() {
 
     setProcessing(true);
     try {
-      await bookingsApi.reject(selectedBooking.id, rejectReason);
+      await providerBookingsApi.reject(selectedBooking.id, rejectReason);
       toast.current?.show({
         severity: 'info',
         summary: 'Rejected',
@@ -111,7 +111,7 @@ export default function ProviderBookings() {
       icon: 'pi pi-check-circle',
       accept: async () => {
         try {
-          await bookingsApi.complete(booking.id);
+          await providerBookingsApi.complete(booking.id);
           toast.current?.show({
             severity: 'success',
             summary: 'Completed',
@@ -212,7 +212,7 @@ export default function ProviderBookings() {
         body={(row) => new Date(row.eventDate).toLocaleDateString()}
         sortable
       />
-      <Column field="totalPrice" header="Total" body={(row) => `${row.totalPrice} TND`} sortable />
+      <Column field="total" header="Total" body={(row) => `${row.total} TND`} sortable />
       <Column
         field="status"
         header="Status"
@@ -314,7 +314,7 @@ export default function ProviderBookings() {
               </div>
               <div className="col-6">
                 <p className="text-color-secondary text-sm mb-1">Total Price</p>
-                <p className="font-bold text-primary m-0">{selectedBooking.totalPrice} TND</p>
+                <p className="font-bold text-primary m-0">{selectedBooking.total} TND</p>
               </div>
               <div className="col-6">
                 <p className="text-color-secondary text-sm mb-1">Booking Source</p>

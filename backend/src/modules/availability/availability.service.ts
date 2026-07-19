@@ -127,14 +127,22 @@ export class AvailabilityService {
       return false;
     }
 
-    // Check weekly schedule
+    // Check weekly schedule. If the provider hasn't configured ANY schedule
+    // for this service yet, treat every day as available (so services are
+    // bookable out of the box); once a schedule exists, honor it strictly.
     const dayOfWeek = new Date(date).getDay();
-    const schedule = await this.availabilityRepository.findOne({
-      where: { serviceId, dayOfWeek },
+    const scheduleCount = await this.availabilityRepository.count({
+      where: { serviceId },
     });
 
-    if (!schedule || !schedule.isAvailable) {
-      return false;
+    if (scheduleCount > 0) {
+      const schedule = await this.availabilityRepository.findOne({
+        where: { serviceId, dayOfWeek },
+      });
+
+      if (!schedule || !schedule.isAvailable) {
+        return false;
+      }
     }
 
     // Check for existing bookings

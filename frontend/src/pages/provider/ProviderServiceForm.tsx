@@ -10,7 +10,7 @@ import { FileUpload, FileUploadHandlerEvent } from 'primereact/fileupload';
 import { Toast } from 'primereact/toast';
 import { Divider } from 'primereact/divider';
 import { Skeleton } from 'primereact/skeleton';
-import { servicesApi, categoriesApi, uploadApi } from '../../api/client';
+import { providerServicesApi, categoriesApi, uploadApi } from '../../api/client';
 import { Category, ServicePackage } from '../../types';
 
 const locations = [
@@ -63,7 +63,7 @@ export default function ProviderServiceForm() {
   const loadCategories = async () => {
     try {
       const response = await categoriesApi.getAll();
-      setCategories(response.data);
+      setCategories(response.data.data.categories || []);
     } catch (error) {
       console.error('Failed to load categories', error);
     }
@@ -71,14 +71,14 @@ export default function ProviderServiceForm() {
 
   const loadService = async () => {
     try {
-      const response = await servicesApi.getById(id!);
-      const service = response.data;
+      const response = await providerServicesApi.getById(id!);
+      const service = response.data.data.service;
       setFormData({
-        name: service.name,
-        description: service.description,
+        name: service.name || '',
+        description: service.description || '',
         categoryId: service.category?.id || '',
-        basePrice: service.basePrice,
-        location: service.location,
+        basePrice: service.basePrice || 0,
+        location: service.location || '',
         images: service.images || [],
         packages: service.packages || [],
       });
@@ -104,7 +104,10 @@ export default function ProviderServiceForm() {
     try {
       const uploadPromises = files.map((file) => uploadApi.upload(file));
       const responses = await Promise.all(uploadPromises);
-      const newImages = responses.map((res) => ({ url: res.data.url }));
+      const newImages = responses.map((res) => ({
+        url: res.data.data?.url ?? res.data.url,
+        publicId: res.data.data?.publicId ?? res.data.publicId,
+      }));
       setFormData((prev) => ({
         ...prev,
         images: [...prev.images, ...newImages],
@@ -175,6 +178,10 @@ export default function ProviderServiceForm() {
     try {
       const payload = {
         ...formData,
+        images: formData.images.map((img: { url: string; publicId?: string }) => ({
+          url: img.url,
+          ...(img.publicId ? { publicId: img.publicId } : {}),
+        })),
         packages: formData.packages
           .filter((pkg) => pkg.name && pkg.price > 0)
           .map((pkg) => ({
@@ -185,14 +192,14 @@ export default function ProviderServiceForm() {
       };
 
       if (isEdit) {
-        await servicesApi.update(id!, payload);
+        await providerServicesApi.update(id!, payload);
         toast.current?.show({
           severity: 'success',
           summary: 'Updated',
           detail: 'Service updated successfully',
         });
       } else {
-        await servicesApi.create(payload);
+        await providerServicesApi.create(payload);
         toast.current?.show({
           severity: 'success',
           summary: 'Created',
@@ -202,10 +209,14 @@ export default function ProviderServiceForm() {
 
       navigate('/provider/services');
     } catch (error: any) {
+      console.error('Service creation error:', error.response?.data || error);
+      const message = error.response?.data?.message
+        || error.response?.data?.data?.message
+        || 'Failed to save service';
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
-        detail: error.response?.data?.message || 'Failed to save service',
+        detail: message,
       });
     } finally {
       setSaving(false);

@@ -28,7 +28,7 @@ export class ServicesService {
     private readonly providerRepository: Repository<ProviderProfile>,
   ) {}
 
-  async create(providerId: string, createDto: CreateServiceDto): Promise<Service> {
+  async create(providerId: string, createDto: CreateServiceDto & { images?: { url: string }[]; packages?: { name: string; description?: string; price: number }[] }): Promise<Service> {
     // Generate unique slug
     let slug = slugify(createDto.name, { lower: true, strict: true });
     const existingSlug = await this.serviceRepository.findOne({
@@ -38,14 +38,47 @@ export class ServicesService {
       slug = `${slug}-${Date.now()}`;
     }
 
+    // Extract images and packages from DTO
+    const { images, packages, ...serviceData } = createDto;
+
     const service = this.serviceRepository.create({
-      ...createDto,
+      ...serviceData,
       providerId,
       slug,
       status: ServiceStatus.PENDING,
     });
 
-    return this.serviceRepository.save(service);
+    const savedService = await this.serviceRepository.save(service);
+
+    // Add images if provided
+    if (images && images.length > 0) {
+      const imageEntities = images.map((img, index) =>
+        this.imageRepository.create({
+          serviceId: savedService.id,
+          url: img.url,
+          isPrimary: index === 0,
+          displayOrder: index,
+        })
+      );
+      await this.imageRepository.save(imageEntities);
+    }
+
+    // Add packages if provided
+    if (packages && packages.length > 0) {
+      const packageEntities = packages.map((pkg, index) =>
+        this.packageRepository.create({
+          serviceId: savedService.id,
+          name: pkg.name,
+          description: pkg.description || '',
+          price: pkg.price,
+          displayOrder: index,
+        })
+      );
+      await this.packageRepository.save(packageEntities);
+    }
+
+    // Return the service with relations
+    return this.findById(savedService.id);
   }
 
   async findById(id: string): Promise<Service> {
@@ -74,24 +107,69 @@ export class ServicesService {
   async update(
     id: string,
     providerId: string,
-    updateDto: UpdateServiceDto,
+    updateDto: UpdateServiceDto & { images?: { url: string }[]; packages?: { name: string; description?: string; price: number }[] },
   ): Promise<Service> {
     const service = await this.findByIdForProvider(id, providerId);
 
+    // Extract images and packages from DTO to handle separately
+    const { images, packages, ...serviceData } = updateDto;
+
     // If updating name, update slug
-    if (updateDto.name && updateDto.name !== service.name) {
-      let slug = slugify(updateDto.name, { lower: true, strict: true });
+    if (serviceData.name && serviceData.name !== service.name) {
+      let slug = slugify(serviceData.name, { lower: true, strict: true });
       const existingSlug = await this.serviceRepository.findOne({
         where: { slug, providerId },
       });
       if (existingSlug && existingSlug.id !== id) {
         slug = `${slug}-${Date.now()}`;
       }
-      (updateDto as Partial<Service>).slug = slug;
+      (serviceData as Partial<Service>).slug = slug;
     }
 
-    Object.assign(service, updateDto);
-    return this.serviceRepository.save(service);
+    Object.assign(service, serviceData);
+    const savedService = await this.serviceRepository.save(service);
+
+    // Handle images update if provided
+    if (images !== undefined) {
+      // Remove existing images
+      await this.imageRepository.delete({ serviceId: id });
+
+      // Add new images
+      if (images.length > 0) {
+        const imageEntities = images.map((img, index) =>
+          this.imageRepository.create({
+            serviceId: id,
+            url: img.url,
+            isPrimary: index === 0,
+            displayOrder: index,
+          })
+        );
+        await this.imageRepository.save(imageEntities);
+      }
+    }
+
+    // Handle packages update if provided
+    if (packages !== undefined) {
+      // Remove existing packages
+      await this.packageRepository.delete({ serviceId: id });
+
+      // Add new packages
+      if (packages.length > 0) {
+        const packageEntities = packages.map((pkg, index) =>
+          this.packageRepository.create({
+            serviceId: id,
+            name: pkg.name,
+            description: pkg.description || '',
+            price: pkg.price,
+            displayOrder: index,
+          })
+        );
+        await this.packageRepository.save(packageEntities);
+      }
+    }
+
+    // Return the updated service with relations
+    return this.findById(id);
   }
 
   async delete(id: string, providerId: string): Promise<void> {

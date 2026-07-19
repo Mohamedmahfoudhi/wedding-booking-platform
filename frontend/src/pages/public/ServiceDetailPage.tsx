@@ -14,7 +14,7 @@ import { Divider } from 'primereact/divider';
 import { Toast } from 'primereact/toast';
 import { useRef } from 'react';
 import { useAppSelector } from '../../store/hooks';
-import { servicesApi, bookingsApi, favoritesApi, availabilityApi, reviewsApi } from '../../api/client';
+import { servicesApi, bookingsApi, favoritesApi, availabilityApi } from '../../api/client';
 import { Service, ServicePackage, Review, Availability } from '../../types';
 
 export default function ServiceDetailPage() {
@@ -51,7 +51,12 @@ export default function ServiceDetailPage() {
   const loadService = async () => {
     try {
       const response = await servicesApi.getById(id!);
-      setService(response.data);
+      const svc = response.data.data?.service;
+      if (!svc) {
+        navigate('/404');
+        return;
+      }
+      setService(svc);
     } catch (error) {
       console.error('Failed to load service', error);
       navigate('/404');
@@ -62,8 +67,8 @@ export default function ServiceDetailPage() {
 
   const loadReviews = async () => {
     try {
-      const response = await reviewsApi.getByService(id!);
-      setReviews(response.data.data || response.data);
+      const response = await servicesApi.getReviews(id!);
+      setReviews(response.data.data?.reviews || []);
     } catch (error) {
       console.error('Failed to load reviews', error);
     }
@@ -71,23 +76,63 @@ export default function ServiceDetailPage() {
 
   const loadAvailability = async () => {
     try {
-      const response = await availabilityApi.getByService(id!);
-      setAvailability(response.data);
-      // Get blocked dates for the next 6 months
-      const blockedResponse = await availabilityApi.getBlockedDates(id!, {
-        startDate: new Date().toISOString(),
-        endDate: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000).toISOString(),
-      });
-      setBlockedDates(blockedResponse.data.map((d: string) => new Date(d)));
+      const now = new Date();
+      const horizonEnd = new Date(now);
+      horizonEnd.setDate(now.getDate() + 180);
+
+      const [scheduleRes, blockedRes] = await Promise.all([
+        servicesApi.getAvailability(id!),
+        availabilityApi.getPublicBlockedDates(
+          id!,
+          now.toISOString(),
+          horizonEnd.toISOString(),
+        ),
+      ]);
+
+      const schedule = scheduleRes.data.data?.schedule || [];
+      setAvailability(schedule);
+
+      // Always honor explicit blocked dates from the provider.
+      const explicitBlocks: Date[] = (
+        blockedRes.data.data?.blockedDates || []
+      ).map((b: { date: string }) => new Date(b.date));
+
+      const blockedSet = new Set(
+        explicitBlocks.map((d) => d.toISOString().slice(0, 10)),
+      );
+
+      // If the provider has set a weekly schedule, also block days-of-week
+      // that aren't in that schedule. Otherwise leave all other days open.
+      const hasSchedule = Array.isArray(schedule) && schedule.length > 0;
+      const scheduledDays = new Set<number>(
+        hasSchedule
+          ? schedule
+              .filter((s: { isAvailable: boolean }) => s.isAvailable)
+              .map((s: { dayOfWeek: number }) => s.dayOfWeek)
+          : [],
+      );
+
+      const blocked: Date[] = [...explicitBlocks];
+      if (hasSchedule) {
+        for (let i = 0; i < 180; i++) {
+          const d = new Date(now);
+          d.setDate(now.getDate() + i);
+          const iso = d.toISOString().slice(0, 10);
+          if (blockedSet.has(iso)) continue;
+          if (!scheduledDays.has(d.getDay())) blocked.push(new Date(d));
+        }
+      }
+      setBlockedDates(blocked);
     } catch (error) {
       console.error('Failed to load availability', error);
+      setBlockedDates([]);
     }
   };
 
   const checkFavorite = async () => {
     try {
       const response = await favoritesApi.check(id!);
-      setIsFavorite(response.data.isFavorite);
+      setIsFavorite(response.data.data?.isFavorite ?? false);
     } catch (error) {
       console.error('Failed to check favorite status', error);
     }
@@ -125,22 +170,29 @@ export default function ServiceDetailPage() {
 
     setBookingLoading(true);
     try {
-      const totalPrice = calculateTotalPrice();
-      await bookingsApi.create({
+      const yyyy = selectedDate.getFullYear();
+      const mm = String(selectedDate.getMonth() + 1).padStart(2, '0');
+      const dd = String(selectedDate.getDate()).padStart(2, '0');
+      const payload: Record<string, unknown> = {
         serviceId: id!,
-        eventDate: selectedDate.toISOString(),
-        packageIds: selectedPackages,
-        notes: bookingNotes,
-        totalPrice,
-      });
+        eventDate: `${yyyy}-${mm}-${dd}`,
+      };
+      if (selectedPackages[0]) payload.packageId = selectedPackages[0];
+      if (bookingNotes.trim()) payload.notes = bookingNotes.trim();
+      await bookingsApi.create(payload);
       toast.current?.show({ severity: 'success', summary: 'Booking request sent!' });
       setBookingDialogVisible(false);
       navigate('/account/bookings');
     } catch (error: any) {
+      console.error('Booking failed:', error.response?.data || error);
+      const errList: string[] | undefined = error.response?.data?.errors;
+      const detail = errList && errList.length > 0
+        ? errList.join(' • ')
+        : error.response?.data?.message || 'Please try again';
       toast.current?.show({
         severity: 'error',
         summary: 'Booking failed',
-        detail: error.response?.data?.message || 'Please try again',
+        detail,
       });
     } finally {
       setBookingLoading(false);

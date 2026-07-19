@@ -88,11 +88,16 @@ let AvailabilityService = class AvailabilityService {
             return false;
         }
         const dayOfWeek = new Date(date).getDay();
-        const schedule = await this.availabilityRepository.findOne({
-            where: { serviceId, dayOfWeek },
+        const scheduleCount = await this.availabilityRepository.count({
+            where: { serviceId },
         });
-        if (!schedule || !schedule.isAvailable) {
-            return false;
+        if (scheduleCount > 0) {
+            const schedule = await this.availabilityRepository.findOne({
+                where: { serviceId, dayOfWeek },
+            });
+            if (!schedule || !schedule.isAvailable) {
+                return false;
+            }
         }
         const existingBooking = await this.bookingRepository.findOne({
             where: {

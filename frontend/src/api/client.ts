@@ -81,9 +81,9 @@ export const authApi = {
 export const categoriesApi = {
   getAll: () => api.get('/categories'),
   getBySlug: (slug: string) => api.get(`/categories/${slug}`),
-  create: (data: Record<string, unknown>) => api.post('/admin/categories', data),
-  update: (id: string, data: Record<string, unknown>) => api.patch(`/admin/categories/${id}`, data),
-  delete: (id: string) => api.delete(`/admin/categories/${id}`),
+  create: (data: Record<string, unknown>) => api.post('/categories', data),
+  update: (id: string, data: Record<string, unknown>) => api.patch(`/categories/${id}`, data),
+  delete: (id: string) => api.delete(`/categories/${id}`),
 };
 
 // Services API
@@ -228,20 +228,54 @@ export const usersApi = {
   getProfile: () => api.get('/users/profile'),
 };
 
-// Availability API
+// Public Availability API — reads exposed under /services/:serviceId/availability
 export const availabilityApi = {
   getWeeklySchedule: (serviceId: string) =>
-    api.get(`/availability/${serviceId}/weekly`),
-  setWeeklySchedule: (serviceId: string, schedule: Record<string, unknown>[]) =>
-    api.put(`/availability/${serviceId}/weekly`, { schedule }),
-  getBlockedDates: (serviceId: string, startDate: string, endDate: string) =>
-    api.get(`/availability/${serviceId}/blocked`, { params: { startDate, endDate } }),
-  addBlockedDate: (serviceId: string, data: { date: string; reason?: string }) =>
-    api.post(`/availability/${serviceId}/blocked`, data),
-  removeBlockedDate: (serviceId: string, blockedDateId: string) =>
-    api.delete(`/availability/${serviceId}/blocked/${blockedDateId}`),
-  checkAvailability: (serviceId: string, date: string, startTime?: string, endTime?: string) =>
-    api.get(`/availability/${serviceId}/check`, { params: { date, startTime, endTime } }),
+    api.get(`/services/${serviceId}/availability`),
+  getAvailableDates: (serviceId: string, month: number, year: number) =>
+    api.get(`/services/${serviceId}/availability/dates`, {
+      params: { month, year },
+    }),
+  getAvailableTimeSlots: (serviceId: string, date: string) =>
+    api.get(`/services/${serviceId}/availability/times`, { params: { date } }),
+  checkAvailability: (
+    serviceId: string,
+    date: string,
+    startTime?: string,
+    endTime?: string,
+  ) =>
+    api.get(`/services/${serviceId}/availability/check`, {
+      params: { date, startTime, endTime },
+    }),
+  getPublicBlockedDates: (
+    serviceId: string,
+    start?: string,
+    end?: string,
+  ) =>
+    api.get(`/services/${serviceId}/availability/blocked-dates`, {
+      params: { start, end },
+    }),
+  // Provider-only endpoints (require auth + PROVIDER role)
+  setWeeklySchedule: (
+    serviceId: string,
+    schedule: Record<string, unknown>[],
+  ) =>
+    api.put(`/provider/services/${serviceId}/availability`, { schedule }),
+  getBlockedDates: (serviceId: string, start?: string, end?: string) =>
+    api.get(`/provider/services/${serviceId}/availability/blocked-dates`, {
+      params: { start, end },
+    }),
+  blockDates: (
+    serviceId: string,
+    dates: { date: string; reason?: string }[],
+  ) =>
+    api.post(`/provider/services/${serviceId}/availability/blocked-dates`, {
+      dates,
+    }),
+  unblockDate: (serviceId: string, blockedDateId: string) =>
+    api.delete(
+      `/provider/services/${serviceId}/availability/blocked-dates/${blockedDateId}`,
+    ),
 };
 
 // Upload API

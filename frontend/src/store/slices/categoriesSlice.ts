@@ -16,7 +16,7 @@ const initialState: CategoriesState = {
 
 export const fetchCategories = createAsyncThunk('categories/fetchAll', async () => {
   const response = await categoriesApi.getAll();
-  return response.data.categories;
+  return response.data.data.categories || [];
 });
 
 const categoriesSlice = createSlice({

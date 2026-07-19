@@ -6,7 +6,7 @@ import { Rating } from 'primereact/rating';
 import { TabView, TabPanel } from 'primereact/tabview';
 import { Skeleton } from 'primereact/skeleton';
 import { Divider } from 'primereact/divider';
-import { providersApi, servicesApi, reviewsApi } from '../../api/client';
+import { providersApi, servicesApi } from '../../api/client';
 import { ProviderProfile, Service, Review } from '../../types';
 import { useAppSelector } from '../../store/hooks';
 
@@ -25,15 +25,21 @@ export default function ProviderPage() {
   useEffect(() => {
     if (id) {
       loadProvider();
-      loadServices();
-      loadReviews();
     }
   }, [id]);
 
   const loadProvider = async () => {
     try {
-      const response = await providersApi.getById(id!);
-      setProvider(response.data);
+      const response = await providersApi.getBySlug(id!);
+      const providerData = response.data.data?.provider;
+      if (!providerData) {
+        navigate('/404');
+        return;
+      }
+      setProvider(providerData);
+      const providerServices: Service[] = providerData.services || [];
+      setServices(providerServices);
+      await loadReviews(providerServices);
     } catch (error) {
       console.error('Failed to load provider', error);
       navigate('/404');
@@ -42,23 +48,19 @@ export default function ProviderPage() {
     }
   };
 
-  const loadServices = async () => {
+  const loadReviews = async (providerServices: Service[]) => {
+    if (providerServices.length === 0) return;
     try {
-      const response = await servicesApi.getAll({ providerId: id });
-      setServices(response.data.data || response.data);
-    } catch (error) {
-      console.error('Failed to load services', error);
-    }
-  };
-
-  const loadReviews = async () => {
-    try {
-      const response = await reviewsApi.getByProvider(id!);
-      const reviewsData = response.data.data || response.data;
-      setReviews(reviewsData);
-      setTotalReviews(reviewsData.length);
-      if (reviewsData.length > 0) {
-        const avg = reviewsData.reduce((sum: number, r: Review) => sum + r.rating, 0) / reviewsData.length;
+      const responses = await Promise.all(
+        providerServices.map((s) => servicesApi.getReviews(s.id)),
+      );
+      const all: Review[] = responses.flatMap(
+        (r) => r.data.data?.reviews || [],
+      );
+      setReviews(all);
+      setTotalReviews(all.length);
+      if (all.length > 0) {
+        const avg = all.reduce((sum, r) => sum + r.rating, 0) / all.length;
         setAverageRating(Math.round(avg * 10) / 10);
       }
     } catch (error) {

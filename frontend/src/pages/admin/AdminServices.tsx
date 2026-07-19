@@ -56,7 +56,7 @@ export default function AdminServices() {
   const loadCategories = async () => {
     try {
       const response = await categoriesApi.getAll();
-      setCategories(response.data);
+      setCategories(response.data.data.categories || []);
     } catch (error) {
       console.error('Failed to load categories', error);
     }
@@ -72,8 +72,8 @@ export default function AdminServices() {
         category: categoryFilter || undefined,
         search: globalFilter || undefined,
       });
-      setServices(response.data.data || response.data);
-      setTotalRecords(response.data.total || (response.data.data || response.data).length);
+      setServices(response.data.data.services || []);
+      setTotalRecords(response.data.data.meta?.total || 0);
     } catch (error) {
       console.error('Failed to load services', error);
     } finally {
@@ -140,7 +140,7 @@ export default function AdminServices() {
       toast.current?.show({
         severity: 'success',
         summary: 'Updated',
-        detail: service.featured ? 'Service unfeatured' : 'Service featured',
+        detail: service.isFeatured ? 'Service unfeatured' : 'Service featured',
       });
       loadServices();
     } catch (error) {
@@ -215,10 +215,10 @@ export default function AdminServices() {
         }}
       />
       <Button
-        icon={rowData.featured ? 'pi pi-star-fill' : 'pi pi-star'}
-        className={`p-button-rounded p-button-text ${rowData.featured ? 'text-yellow-500' : ''}`}
+        icon={rowData.isFeatured ? 'pi pi-star-fill' : 'pi pi-star'}
+        className={`p-button-rounded p-button-text ${rowData.isFeatured ? 'text-yellow-500' : ''}`}
         onClick={() => handleToggleFeatured(rowData)}
-        tooltip={rowData.featured ? 'Unfeature' : 'Feature'}
+        tooltip={rowData.isFeatured ? 'Unfeature' : 'Feature'}
       />
       <Button
         icon="pi pi-trash"
@@ -230,10 +230,10 @@ export default function AdminServices() {
 
   const statusOptions = [
     { label: 'All Status', value: '' },
-    { label: 'Active', value: 'active' },
+    { label: 'Draft', value: 'draft' },
     { label: 'Pending', value: 'pending' },
+    { label: 'Approved', value: 'approved' },
     { label: 'Rejected', value: 'rejected' },
-    { label: 'Inactive', value: 'inactive' },
   ];
 
   const header = (
@@ -250,17 +250,20 @@ export default function AdminServices() {
         </span>
         <Dropdown
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.value)}
+          onChange={(e) => setStatusFilter(e.value ?? '')}
           options={statusOptions}
+          optionLabel="label"
+          optionValue="value"
           placeholder="Status"
         />
         <Dropdown
           value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.value)}
+          onChange={(e) => setCategoryFilter(e.value ?? '')}
           options={[{ label: 'All Categories', value: '' }, ...categories.map((c) => ({ label: c.name, value: c.slug }))]}
+          optionLabel="label"
+          optionValue="value"
           placeholder="Category"
         />
-        <Button icon="pi pi-search" onClick={handleSearch} />
       </div>
       <span className="text-color-secondary">{totalRecords} services total</span>
     </div>
@@ -309,10 +312,10 @@ export default function AdminServices() {
             body={(row) => <Tag value={row.status} severity={getStatusSeverity(row.status)} />}
           />
           <Column
-            field="featured"
+            field="isFeatured"
             header="Featured"
             body={(row) =>
-              row.featured ? <i className="pi pi-star-fill text-yellow-500" /> : <i className="pi pi-star text-color-secondary" />
+              row.isFeatured ? <i className="pi pi-star-fill text-yellow-500" /> : <i className="pi pi-star text-color-secondary" />
             }
           />
           <Column body={actionsTemplate} style={{ width: '150px' }} />
@@ -325,6 +328,7 @@ export default function AdminServices() {
         visible={detailsVisible}
         onHide={() => setDetailsVisible(false)}
         style={{ width: '700px' }}
+        breakpoints={{ '768px': '95vw' }}
         footer={
           selectedService?.status === ServiceStatus.PENDING && (
             <div className="flex justify-content-end gap-2">
@@ -347,45 +351,48 @@ export default function AdminServices() {
         {selectedService && (
           <TabView>
             <TabPanel header="Details">
-              <div className="flex flex-column gap-4">
-                {selectedService.images && selectedService.images.length > 0 && (
-                  <div className="flex gap-2 overflow-x-auto">
-                    {selectedService.images.map((img, i) => (
-                      <img
-                        key={i}
-                        src={img.url}
-                        alt={`Service ${i + 1}`}
-                        className="border-round"
-                        style={{ width: '150px', height: '100px', objectFit: 'cover' }}
-                      />
-                    ))}
-                  </div>
-                )}
+              {/* Images */}
+              {selectedService.images && selectedService.images.length > 0 && (
+                <div className="flex gap-2 mb-4 overflow-x-auto">
+                  {selectedService.images.map((img, i) => (
+                    <img
+                      key={i}
+                      src={img.url}
+                      alt={`Service ${i + 1}`}
+                      className="border-round flex-shrink-0"
+                      style={{ width: '140px', height: '90px', objectFit: 'cover' }}
+                    />
+                  ))}
+                </div>
+              )}
 
-                <div className="grid">
-                  <div className="col-12">
-                    <h3 className="m-0">{selectedService.name}</h3>
-                    <p className="text-color-secondary">{selectedService.description}</p>
-                  </div>
-                  <div className="col-6">
-                    <p className="text-color-secondary text-sm mb-1">Category</p>
-                    <p className="m-0 font-medium">{selectedService.category?.name}</p>
-                  </div>
-                  <div className="col-6">
-                    <p className="text-color-secondary text-sm mb-1">Location</p>
-                    <p className="m-0 font-medium">{selectedService.location}</p>
-                  </div>
-                  <div className="col-6">
-                    <p className="text-color-secondary text-sm mb-1">Base Price</p>
-                    <p className="m-0 font-bold text-primary">{selectedService.basePrice} TND</p>
-                  </div>
-                  <div className="col-6">
-                    <p className="text-color-secondary text-sm mb-1">Status</p>
+              {/* Name & Description */}
+              <h3 className="mt-0 mb-2">{selectedService.name}</h3>
+              <p className="text-color-secondary mt-0 mb-4">{selectedService.description}</p>
+
+              {/* Info Grid */}
+              <div className="grid m-0">
+                <div className="col-6 pl-0">
+                  <span className="text-color-secondary text-sm">Category</span>
+                  <p className="mt-1 mb-0 font-medium">{selectedService.category?.name || '-'}</p>
+                </div>
+                <div className="col-6 pr-0">
+                  <span className="text-color-secondary text-sm">Location</span>
+                  <p className="mt-1 mb-0 font-medium">{selectedService.location || '-'}</p>
+                </div>
+                <div className="col-6 pl-0">
+                  <span className="text-color-secondary text-sm">Base Price</span>
+                  <p className="mt-1 mb-0 font-bold text-primary">{selectedService.basePrice} TND</p>
+                </div>
+                <div className="col-6 pr-0">
+                  <span className="text-color-secondary text-sm">Status</span>
+                  <div className="mt-1">
                     <Tag value={selectedService.status} severity={getStatusSeverity(selectedService.status)} />
                   </div>
                 </div>
               </div>
             </TabPanel>
+
             <TabPanel header="Provider">
               <div className="flex align-items-center gap-3">
                 {selectedService.provider?.logo ? (
@@ -403,10 +410,34 @@ export default function AdminServices() {
                   </div>
                 )}
                 <div>
-                  <p className="font-medium m-0">{selectedService.provider?.businessName}</p>
-                  <p className="text-color-secondary m-0">{selectedService.provider?.city}</p>
+                  <p className="font-semibold m-0">{selectedService.provider?.businessName}</p>
+                  <p className="text-color-secondary text-sm m-0 mt-1">{selectedService.provider?.city || '-'}</p>
                 </div>
               </div>
+            </TabPanel>
+
+            <TabPanel header="Packages">
+              {selectedService.packages && selectedService.packages.length > 0 ? (
+                <div className="flex flex-column gap-2">
+                  {selectedService.packages.map((pkg, index) => (
+                    <div key={pkg.id || index} className="surface-100 border-round p-3">
+                      <div className="flex justify-content-between align-items-center">
+                        <div>
+                          <p className="font-semibold m-0">{pkg.name}</p>
+                          {pkg.description && (
+                            <p className="text-color-secondary text-sm m-0 mt-1">{pkg.description}</p>
+                          )}
+                        </div>
+                        <span className="font-bold text-primary white-space-nowrap ml-3">{pkg.price} TND</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="empty-state flex align-items-center justify-content-center flex-1">
+                  <p className="text-color-secondary m-0">No packages available</p>
+                </div>
+              )}
             </TabPanel>
           </TabView>
         )}

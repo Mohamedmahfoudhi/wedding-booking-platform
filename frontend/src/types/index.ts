@@ -56,6 +56,7 @@ export interface Category {
   image?: string;
   displayOrder: number;
   isActive: boolean;
+  serviceCount?: number;
 }
 
 export enum PriceType {
@@ -103,6 +104,7 @@ export interface Service {
   durationMinutes?: number;
   capacityMin?: number;
   capacityMax?: number;
+  location?: string;
   isActive: boolean;
   isFeatured: boolean;
   status: ServiceStatus;

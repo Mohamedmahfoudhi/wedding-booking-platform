@@ -25,7 +25,7 @@ export class CreateBookingDto {
 
   @ApiProperty({ example: '2024-06-15' })
   @IsDateString()
-  eventDate: Date;
+  eventDate: string;
 
   @ApiPropertyOptional({ example: '14:00' })
   @IsString()

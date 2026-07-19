@@ -7,7 +7,7 @@ import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Tag } from 'primereact/tag';
 import { Skeleton } from 'primereact/skeleton';
-import { providersApi, bookingsApi } from '../../api/client';
+import { providersApi, providerBookingsApi } from '../../api/client';
 import { Booking } from '../../types';
 
 interface DashboardStats {
@@ -30,13 +30,14 @@ export default function ProviderDashboard() {
   const loadDashboardStats = async () => {
     try {
       const [dashboardRes, recentBookingsRes] = await Promise.all([
-        providersApi.getDashboard(),
-        bookingsApi.getProviderBookings({ limit: 5 }),
+        providersApi.getDashboardStats(),
+        providerBookingsApi.getAll(1, 5),
       ]);
 
+      const dashboardStats = dashboardRes.data.data?.stats || dashboardRes.data.data || {};
       setStats({
-        ...dashboardRes.data,
-        recentBookings: recentBookingsRes.data.data || recentBookingsRes.data,
+        ...dashboardStats,
+        recentBookings: recentBookingsRes.data.data?.bookings || [],
       });
     } catch (error) {
       console.error('Failed to load dashboard stats', error);
@@ -249,7 +250,7 @@ export default function ProviderDashboard() {
                 header="Event Date"
                 body={(row) => new Date(row.eventDate).toLocaleDateString()}
               />
-              <Column field="totalPrice" header="Total" body={(row) => `${row.totalPrice} TND`} />
+              <Column field="total" header="Total" body={(row) => `${row.total} TND`} />
               <Column
                 field="status"
                 header="Status"

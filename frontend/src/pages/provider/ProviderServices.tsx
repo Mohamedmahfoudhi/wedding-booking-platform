@@ -9,8 +9,8 @@ import { Toast } from 'primereact/toast';
 import { Skeleton } from 'primereact/skeleton';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { InputText } from 'primereact/inputtext';
-import { servicesApi } from '../../api/client';
-import { Service, ServiceStatus } from '../../types';
+import { providerServicesApi } from '../../api/client';
+import { Service } from '../../types';
 
 export default function ProviderServices() {
   const navigate = useNavigate();
@@ -25,8 +25,8 @@ export default function ProviderServices() {
 
   const loadServices = async () => {
     try {
-      const response = await servicesApi.getMyServices();
-      setServices(response.data.data || response.data);
+      const response = await providerServicesApi.getAll();
+      setServices(response.data.data?.services || []);
     } catch (error) {
       console.error('Failed to load services', error);
       toast.current?.show({
@@ -47,7 +47,7 @@ export default function ProviderServices() {
       acceptClassName: 'p-button-danger',
       accept: async () => {
         try {
-          await servicesApi.delete(service.id);
+          await providerServicesApi.delete(service.id);
           setServices(services.filter((s) => s.id !== service.id));
           toast.current?.show({
             severity: 'success',
@@ -65,32 +65,32 @@ export default function ProviderServices() {
     });
   };
 
-  const handleToggleStatus = async (service: Service) => {
+  const handleToggleActive = async (service: Service) => {
     try {
-      const newStatus = service.status === ServiceStatus.ACTIVE ? ServiceStatus.INACTIVE : ServiceStatus.ACTIVE;
-      await servicesApi.updateStatus(service.id, newStatus);
-      setServices(services.map((s) => (s.id === service.id ? { ...s, status: newStatus } : s)));
+      const newIsActive = !service.isActive;
+      await providerServicesApi.update(service.id, { isActive: newIsActive });
+      setServices(services.map((s) => (s.id === service.id ? { ...s, isActive: newIsActive } : s)));
       toast.current?.show({
         severity: 'success',
         summary: 'Updated',
-        detail: `Service is now ${newStatus}`,
+        detail: `Service is now ${newIsActive ? 'active' : 'inactive'}`,
       });
     } catch (error) {
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
-        detail: 'Failed to update service status',
+        detail: 'Failed to update service',
       });
     }
   };
 
   const getStatusSeverity = (status: string) => {
     switch (status) {
-      case 'active':
+      case 'approved':
         return 'success';
-      case 'inactive':
-        return 'warning';
       case 'pending':
+        return 'warning';
+      case 'draft':
         return 'info';
       case 'rejected':
         return 'danger';
@@ -122,10 +122,10 @@ export default function ProviderServices() {
         onClick={() => navigate(`/provider/services/${rowData.id}/edit`)}
       />
       <Button
-        icon={rowData.status === ServiceStatus.ACTIVE ? 'pi pi-eye-slash' : 'pi pi-eye'}
+        icon={rowData.isActive ? 'pi pi-eye-slash' : 'pi pi-eye'}
         className="p-button-rounded p-button-text"
-        onClick={() => handleToggleStatus(rowData)}
-        tooltip={rowData.status === ServiceStatus.ACTIVE ? 'Deactivate' : 'Activate'}
+        onClick={() => handleToggleActive(rowData)}
+        tooltip={rowData.isActive ? 'Deactivate' : 'Activate'}
       />
       <Button
         icon="pi pi-trash"
@@ -202,7 +202,7 @@ export default function ProviderServices() {
               body={(row) => (
                 <span>
                   <i className="pi pi-star-fill text-yellow-500 mr-1" />
-                  {row.avgRating?.toFixed(1) || '0'} ({row.reviewCount || 0})
+                  {parseFloat(row.avgRating || 0).toFixed(1)} ({row.reviewCount || 0})
                 </span>
               )}
             />

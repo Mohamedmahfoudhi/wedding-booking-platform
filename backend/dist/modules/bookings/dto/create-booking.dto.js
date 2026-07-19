@@ -35,7 +35,7 @@ __decorate([
 __decorate([
     (0, swagger_1.ApiProperty)({ example: '2024-06-15' }),
     (0, class_validator_1.IsDateString)(),
-    __metadata("design:type", Date)
+    __metadata("design:type", String)
 ], CreateBookingDto.prototype, "eventDate", void 0);
 __decorate([
     (0, swagger_1.ApiPropertyOptional)({ example: '14:00' }),

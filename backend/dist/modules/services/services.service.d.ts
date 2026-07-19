@@ -13,10 +13,28 @@ export declare class ServicesService {
     private readonly packageRepository;
     private readonly providerRepository;
     constructor(serviceRepository: Repository<Service>, imageRepository: Repository<ServiceImage>, packageRepository: Repository<ServicePackage>, providerRepository: Repository<ProviderProfile>);
-    create(providerId: string, createDto: CreateServiceDto): Promise<Service>;
+    create(providerId: string, createDto: CreateServiceDto & {
+        images?: {
+            url: string;
+        }[];
+        packages?: {
+            name: string;
+            description?: string;
+            price: number;
+        }[];
+    }): Promise<Service>;
     findById(id: string): Promise<Service>;
     findByIdForProvider(id: string, providerId: string): Promise<Service>;
-    update(id: string, providerId: string, updateDto: UpdateServiceDto): Promise<Service>;
+    update(id: string, providerId: string, updateDto: UpdateServiceDto & {
+        images?: {
+            url: string;
+        }[];
+        packages?: {
+            name: string;
+            description?: string;
+            price: number;
+        }[];
+    }): Promise<Service>;
     delete(id: string, providerId: string): Promise<void>;
     findByProvider(providerId: string, page?: number, limit?: number): Promise<{
         services: Service[];

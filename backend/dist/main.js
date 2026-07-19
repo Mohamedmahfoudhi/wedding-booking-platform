@@ -5,13 +5,21 @@ const common_1 = require("@nestjs/common");
 const config_1 = require("@nestjs/config");
 const swagger_1 = require("@nestjs/swagger");
 const helmet_1 = require("helmet");
+const path_1 = require("path");
 const app_module_1 = require("./app.module");
 const http_exception_filter_1 = require("./common/filters/http-exception.filter");
 const transform_interceptor_1 = require("./common/interceptors/transform.interceptor");
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);
-    app.use((0, helmet_1.default)());
+    app.use((0, helmet_1.default)({
+        crossOriginResourcePolicy: { policy: 'cross-origin' },
+    }));
+    if (configService.get('NODE_ENV') !== 'production') {
+        app.useStaticAssets((0, path_1.join)(process.cwd(), 'uploads'), {
+            prefix: '/uploads/',
+        });
+    }
     app.enableCors({
         origin: configService.get('FRONTEND_URL') || 'http://localhost:5173',
         credentials: true,

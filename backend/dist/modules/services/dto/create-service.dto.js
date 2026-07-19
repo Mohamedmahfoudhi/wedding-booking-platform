@@ -9,10 +9,40 @@ var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CreateServiceDto = void 0;
+exports.CreateServiceDto = exports.ServicePackageDto = exports.ServiceImageDto = void 0;
 const class_validator_1 = require("class-validator");
+const class_transformer_1 = require("class-transformer");
 const swagger_1 = require("@nestjs/swagger");
 const service_entity_1 = require("../../../database/entities/service.entity");
+class ServiceImageDto {
+}
+exports.ServiceImageDto = ServiceImageDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ServiceImageDto.prototype, "url", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ServiceImageDto.prototype, "publicId", void 0);
+class ServicePackageDto {
+}
+exports.ServicePackageDto = ServicePackageDto;
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], ServicePackageDto.prototype, "name", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], ServicePackageDto.prototype, "description", void 0);
+__decorate([
+    (0, class_validator_1.IsNumber)(),
+    (0, class_validator_1.Min)(0),
+    __metadata("design:type", Number)
+], ServicePackageDto.prototype, "price", void 0);
 class CreateServiceDto {
 }
 exports.CreateServiceDto = CreateServiceDto;
@@ -71,4 +101,26 @@ __decorate([
     (0, class_validator_1.IsOptional)(),
     __metadata("design:type", Number)
 ], CreateServiceDto.prototype, "capacityMax", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ example: 'Tunis' }),
+    (0, class_validator_1.IsString)(),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", String)
+], CreateServiceDto.prototype, "location", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ type: [ServiceImageDto] }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => ServiceImageDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], CreateServiceDto.prototype, "images", void 0);
+__decorate([
+    (0, swagger_1.ApiPropertyOptional)({ type: [ServicePackageDto] }),
+    (0, class_validator_1.IsArray)(),
+    (0, class_validator_1.ValidateNested)({ each: true }),
+    (0, class_transformer_1.Type)(() => ServicePackageDto),
+    (0, class_validator_1.IsOptional)(),
+    __metadata("design:type", Array)
+], CreateServiceDto.prototype, "packages", void 0);
 //# sourceMappingURL=create-service.dto.js.map

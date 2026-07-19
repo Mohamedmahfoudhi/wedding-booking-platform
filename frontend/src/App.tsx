@@ -20,6 +20,7 @@ import CategoryPage from './pages/public/CategoryPage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 
 // Client pages
 import ClientDashboard from './pages/client/ClientDashboard';
@@ -86,6 +87,7 @@ function App() {
           isAuthenticated ? <Navigate to="/" /> : <RegisterPage />
         } />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
 
         {/* Client routes */}
         <Route element={

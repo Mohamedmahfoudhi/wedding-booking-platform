@@ -36,13 +36,34 @@ let ServicesService = class ServicesService {
         if (existingSlug) {
             slug = `${slug}-${Date.now()}`;
         }
+        const { images, packages, ...serviceData } = createDto;
         const service = this.serviceRepository.create({
-            ...createDto,
+            ...serviceData,
             providerId,
             slug,
             status: service_entity_1.ServiceStatus.PENDING,
         });
-        return this.serviceRepository.save(service);
+        const savedService = await this.serviceRepository.save(service);
+        if (images && images.length > 0) {
+            const imageEntities = images.map((img, index) => this.imageRepository.create({
+                serviceId: savedService.id,
+                url: img.url,
+                isPrimary: index === 0,
+                displayOrder: index,
+            }));
+            await this.imageRepository.save(imageEntities);
+        }
+        if (packages && packages.length > 0) {
+            const packageEntities = packages.map((pkg, index) => this.packageRepository.create({
+                serviceId: savedService.id,
+                name: pkg.name,
+                description: pkg.description || '',
+                price: pkg.price,
+                displayOrder: index,
+            }));
+            await this.packageRepository.save(packageEntities);
+        }
+        return this.findById(savedService.id);
     }
     async findById(id) {
         const service = await this.serviceRepository.findOne({
@@ -63,18 +84,45 @@ let ServicesService = class ServicesService {
     }
     async update(id, providerId, updateDto) {
         const service = await this.findByIdForProvider(id, providerId);
-        if (updateDto.name && updateDto.name !== service.name) {
-            let slug = (0, slugify_1.default)(updateDto.name, { lower: true, strict: true });
+        const { images, packages, ...serviceData } = updateDto;
+        if (serviceData.name && serviceData.name !== service.name) {
+            let slug = (0, slugify_1.default)(serviceData.name, { lower: true, strict: true });
             const existingSlug = await this.serviceRepository.findOne({
                 where: { slug, providerId },
             });
             if (existingSlug && existingSlug.id !== id) {
                 slug = `${slug}-${Date.now()}`;
             }
-            updateDto.slug = slug;
+            serviceData.slug = slug;
         }
-        Object.assign(service, updateDto);
-        return this.serviceRepository.save(service);
+        Object.assign(service, serviceData);
+        const savedService = await this.serviceRepository.save(service);
+        if (images !== undefined) {
+            await this.imageRepository.delete({ serviceId: id });
+            if (images.length > 0) {
+                const imageEntities = images.map((img, index) => this.imageRepository.create({
+                    serviceId: id,
+                    url: img.url,
+                    isPrimary: index === 0,
+                    displayOrder: index,
+                }));
+                await this.imageRepository.save(imageEntities);
+            }
+        }
+        if (packages !== undefined) {
+            await this.packageRepository.delete({ serviceId: id });
+            if (packages.length > 0) {
+                const packageEntities = packages.map((pkg, index) => this.packageRepository.create({
+                    serviceId: id,
+                    name: pkg.name,
+                    description: pkg.description || '',
+                    price: pkg.price,
+                    displayOrder: index,
+                }));
+                await this.packageRepository.save(packageEntities);
+            }
+        }
+        return this.findById(id);
     }
     async delete(id, providerId) {
         const service = await this.findByIdForProvider(id, providerId);

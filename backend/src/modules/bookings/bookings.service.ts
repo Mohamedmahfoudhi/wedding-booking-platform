@@ -53,10 +53,12 @@ export class BookingsService {
       throw new NotFoundException('Service not found');
     }
 
+    const eventDate = new Date(createDto.eventDate);
+
     // Check availability
     const isAvailable = await this.availabilityService.checkAvailability(
       createDto.serviceId,
-      createDto.eventDate,
+      eventDate,
       createDto.startTime,
       createDto.endTime,
     );
@@ -80,7 +82,7 @@ export class BookingsService {
       packageId: createDto.packageId,
       clientId,
       providerId: service.providerId,
-      eventDate: createDto.eventDate,
+      eventDate,
       startTime: createDto.startTime,
       endTime: createDto.endTime,
       guestCount: createDto.guestCount,
@@ -135,7 +137,7 @@ export class BookingsService {
       packageId: createDto.packageId,
       clientId: createDto.clientId || null as unknown as string,
       providerId,
-      eventDate: createDto.eventDate,
+      eventDate: new Date(createDto.eventDate),
       startTime: createDto.startTime,
       endTime: createDto.endTime,
       guestCount: createDto.guestCount,

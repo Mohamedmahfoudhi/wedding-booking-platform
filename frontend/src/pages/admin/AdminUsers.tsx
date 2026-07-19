@@ -39,14 +39,14 @@ export default function AdminUsers() {
   const loadUsers = async () => {
     setLoading(true);
     try {
-      const response = await adminApi.getUsers({
-        page: first / rows + 1,
-        limit: rows,
-        role: roleFilter || undefined,
-        search: globalFilter || undefined,
-      });
-      setUsers(response.data.data || response.data);
-      setTotalRecords(response.data.total || (response.data.data || response.data).length);
+      const response = await adminApi.getUsers(
+        first / rows + 1,
+        rows,
+        roleFilter && roleFilter !== '' ? roleFilter : undefined,
+        globalFilter && globalFilter !== '' ? globalFilter : undefined
+      );
+      setUsers(response.data.data.users || []);
+      setTotalRecords(response.data.data.meta?.total || 0);
     } catch (error) {
       console.error('Failed to load users', error);
     } finally {
@@ -67,7 +67,7 @@ export default function AdminUsers() {
       icon: 'pi pi-exclamation-triangle',
       accept: async () => {
         try {
-          await adminApi.toggleUserStatus(user.id);
+          await adminApi.updateUser(user.id, { isActive: !user.isActive });
           toast.current?.show({
             severity: 'success',
             summary: 'Success',

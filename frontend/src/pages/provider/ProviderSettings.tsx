@@ -11,7 +11,7 @@ import { Divider } from 'primereact/divider';
 import { Skeleton } from 'primereact/skeleton';
 import { Tag } from 'primereact/tag';
 import { useAppSelector, useAppDispatch } from '../../store/hooks';
-import { providersApi, usersApi, uploadApi, paymentsApi } from '../../api/client';
+import { providersApi, usersApi, uploadApi, providerStripeApi } from '../../api/client';
 import { loadUser } from '../../store/slices/authSlice';
 
 interface ProfileData {
@@ -70,10 +70,12 @@ export default function ProviderSettings() {
     try {
       const [profileRes, stripeRes] = await Promise.all([
         providersApi.getProfile(),
-        paymentsApi.getStripeStatus().catch(() => ({ data: { status: 'not_connected' } })),
+        providerStripeApi
+          .getStatus()
+          .catch(() => ({ data: { data: { status: 'not_connected' } } }) as any),
       ]);
 
-      const profile = profileRes.data;
+      const profile = profileRes.data.data?.profile || profileRes.data.data || {};
       setProfileData({
         businessName: profile.businessName || '',
         description: profile.description || '',
@@ -90,7 +92,7 @@ export default function ProviderSettings() {
         email: user?.email || '',
       });
 
-      setStripeStatus(stripeRes.data.status);
+      setStripeStatus(stripeRes.data.data?.status || 'not_connected');
     } catch (error) {
       console.error('Failed to load settings', error);
     } finally {
@@ -109,7 +111,10 @@ export default function ProviderSettings() {
   const handleLogoUpload = async (event: FileUploadHandlerEvent) => {
     try {
       const response = await uploadApi.upload(event.files[0]);
-      setProfileData((prev) => ({ ...prev, logo: response.data.url }));
+      setProfileData((prev) => ({
+        ...prev,
+        logo: response.data.data?.url ?? response.data.url,
+      }));
       toast.current?.show({
         severity: 'success',
         summary: 'Uploaded',
@@ -127,7 +132,7 @@ export default function ProviderSettings() {
   const handleSaveProfile = async () => {
     setSaving(true);
     try {
-      await providersApi.updateProfile(profileData);
+      await providersApi.updateProfile({ ...profileData });
       toast.current?.show({
         severity: 'success',
         summary: 'Saved',
@@ -147,7 +152,7 @@ export default function ProviderSettings() {
   const handleSaveAccount = async () => {
     setSaving(true);
     try {
-      await usersApi.updateProfile(accountData);
+      await usersApi.updateProfile({ ...accountData });
       dispatch(loadUser());
       toast.current?.show({
         severity: 'success',
@@ -186,7 +191,10 @@ export default function ProviderSettings() {
 
     setSaving(true);
     try {
-      await usersApi.changePassword(passwordData.currentPassword, passwordData.newPassword);
+      await usersApi.changePassword({
+        currentPassword: passwordData.currentPassword,
+        newPassword: passwordData.newPassword,
+      });
       setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
       toast.current?.show({
         severity: 'success',
@@ -207,8 +215,10 @@ export default function ProviderSettings() {
   const handleConnectStripe = async () => {
     setStripeLoading(true);
     try {
-      const response = await paymentsApi.createStripeOnboarding();
-      window.location.href = response.data.url;
+      const response = await providerStripeApi.startOnboarding();
+      const url =
+        response.data.data?.url || response.data.url;
+      if (url) window.location.href = url;
     } catch (error) {
       toast.current?.show({
         severity: 'error',

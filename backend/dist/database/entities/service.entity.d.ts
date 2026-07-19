@@ -32,6 +32,7 @@ export declare class Service {
     durationMinutes: number;
     capacityMin: number;
     capacityMax: number;
+    location: string;
     isActive: boolean;
     isFeatured: boolean;
     status: ServiceStatus;

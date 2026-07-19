@@ -150,17 +150,21 @@ let AdminService = class AdminService {
         provider.isFeatured = featured;
         return this.providerRepository.save(provider);
     }
-    async getServices(page = 1, limit = 10, status, categoryId) {
+    async getServices(page = 1, limit = 10, status, categoryId, categorySlug) {
         const query = this.serviceRepository.createQueryBuilder('service')
             .leftJoinAndSelect('service.provider', 'provider')
             .leftJoinAndSelect('provider.user', 'user')
             .leftJoinAndSelect('service.category', 'category')
-            .leftJoinAndSelect('service.images', 'images');
+            .leftJoinAndSelect('service.images', 'images')
+            .leftJoinAndSelect('service.packages', 'packages');
         if (status) {
-            query.where('service.status = :status', { status });
+            query.andWhere('service.status = :status', { status });
         }
         if (categoryId) {
             query.andWhere('service.categoryId = :categoryId', { categoryId });
+        }
+        if (categorySlug) {
+            query.andWhere('category.slug = :categorySlug', { categorySlug });
         }
         const [services, total] = await query
             .skip((page - 1) * limit)
@@ -194,6 +198,21 @@ let AdminService = class AdminService {
         }
         service.isFeatured = featured;
         return this.serviceRepository.save(service);
+    }
+    async toggleFeatured(id) {
+        const service = await this.serviceRepository.findOne({ where: { id } });
+        if (!service) {
+            throw new common_1.NotFoundException('Service not found');
+        }
+        service.isFeatured = !service.isFeatured;
+        return this.serviceRepository.save(service);
+    }
+    async deleteService(id) {
+        const service = await this.serviceRepository.findOne({ where: { id } });
+        if (!service) {
+            throw new common_1.NotFoundException('Service not found');
+        }
+        await this.serviceRepository.remove(service);
     }
     async getReviews(page = 1, limit = 10) {
         const [reviews, total] = await this.reviewRepository.findAndCount({

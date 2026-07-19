@@ -26,8 +26,8 @@ export default function ClientBookings() {
 
   const loadBookings = async () => {
     try {
-      const response = await bookingsApi.getAll();
-      setBookings(response.data.data || response.data);
+      const response = await bookingsApi.getMyBookings();
+      setBookings(response.data.data?.bookings || []);
     } catch (error) {
       console.error('Failed to load bookings', error);
       toast.current?.show({
@@ -241,7 +241,7 @@ export default function ClientBookings() {
                 <div className="col-6">
                   <p className="text-color-secondary text-sm mb-1">Total Price</p>
                   <p className="font-medium text-primary m-0">
-                    {selectedBooking.totalPrice} TND
+                    {selectedBooking.total} TND
                   </p>
                 </div>
               </div>
@@ -295,7 +295,7 @@ function BookingTable({ bookings, serviceTemplate, dateTemplate, statusTemplate,
       <Column header="Service" body={serviceTemplate} />
       <Column field="eventDate" header="Event Date" body={dateTemplate} sortable />
       <Column field="status" header="Status" body={statusTemplate} />
-      <Column field="totalPrice" header="Total" body={(row) => `${row.totalPrice} TND`} sortable />
+      <Column field="total" header="Total" body={(row) => `${row.total} TND`} sortable />
       <Column body={actionsTemplate} style={{ width: '120px' }} />
     </DataTable>
   );

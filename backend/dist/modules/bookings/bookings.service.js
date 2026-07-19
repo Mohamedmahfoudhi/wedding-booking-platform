@@ -43,7 +43,8 @@ let BookingsService = class BookingsService {
         if (!service) {
             throw new common_1.NotFoundException('Service not found');
         }
-        const isAvailable = await this.availabilityService.checkAvailability(createDto.serviceId, createDto.eventDate, createDto.startTime, createDto.endTime);
+        const eventDate = new Date(createDto.eventDate);
+        const isAvailable = await this.availabilityService.checkAvailability(createDto.serviceId, eventDate, createDto.startTime, createDto.endTime);
         if (!isAvailable) {
             throw new common_1.BadRequestException('Selected date/time is not available');
         }
@@ -57,7 +58,7 @@ let BookingsService = class BookingsService {
             packageId: createDto.packageId,
             clientId,
             providerId: service.providerId,
-            eventDate: createDto.eventDate,
+            eventDate,
             startTime: createDto.startTime,
             endTime: createDto.endTime,
             guestCount: createDto.guestCount,
@@ -88,7 +89,7 @@ let BookingsService = class BookingsService {
             packageId: createDto.packageId,
             clientId: createDto.clientId || null,
             providerId,
-            eventDate: createDto.eventDate,
+            eventDate: new Date(createDto.eventDate),
             startTime: createDto.startTime,
             endTime: createDto.endTime,
             guestCount: createDto.guestCount,

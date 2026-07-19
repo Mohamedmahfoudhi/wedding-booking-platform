@@ -8,7 +8,7 @@ import { Dropdown } from 'primereact/dropdown';
 import { Toast } from 'primereact/toast';
 import { Skeleton } from 'primereact/skeleton';
 import { Paginator, PaginatorPageChangeEvent } from 'primereact/paginator';
-import { reviewsApi, servicesApi } from '../../api/client';
+import { reviewsApi, providerServicesApi } from '../../api/client';
 import { Review, Service } from '../../types';
 
 export default function ProviderReviews() {
@@ -42,8 +42,8 @@ export default function ProviderReviews() {
 
   const loadServices = async () => {
     try {
-      const response = await servicesApi.getMyServices();
-      setServices(response.data.data || response.data);
+      const response = await providerServicesApi.getAll();
+      setServices(response.data.data?.services || []);
     } catch (error) {
       console.error('Failed to load services', error);
     }
@@ -52,28 +52,32 @@ export default function ProviderReviews() {
   const loadReviews = async () => {
     setLoading(true);
     try {
-      const response = await reviewsApi.getProviderReviews({
-        page,
-        limit: rows,
-        serviceId: selectedService || undefined,
-      });
+      const response = await reviewsApi.getProviderReviews(page, rows);
+      const wrapped = response.data.data || {};
+      const allReviews: Review[] = wrapped.reviews || [];
+      const filtered = selectedService
+        ? allReviews.filter((r) => r.service?.id === selectedService)
+        : allReviews;
+      setReviews(filtered);
+      setTotalRecords(wrapped.meta?.total ?? filtered.length);
 
-      const data = response.data;
-      setReviews(data.data || data.reviews || data);
-      setTotalRecords(data.total || (data.data || data.reviews || data).length);
-
-      // Calculate stats
-      const allReviews = data.data || data.reviews || data;
-      if (allReviews.length > 0) {
-        const avg = allReviews.reduce((sum: number, r: Review) => sum + r.rating, 0) / allReviews.length;
+      if (filtered.length > 0) {
+        const avg =
+          filtered.reduce((sum, r) => sum + r.rating, 0) / filtered.length;
         const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-        allReviews.forEach((r: Review) => {
+        filtered.forEach((r) => {
           distribution[r.rating as keyof typeof distribution]++;
         });
         setStats({
           avgRating: Math.round(avg * 10) / 10,
-          totalReviews: allReviews.length,
+          totalReviews: filtered.length,
           ratingDistribution: distribution,
+        });
+      } else {
+        setStats({
+          avgRating: 0,
+          totalReviews: 0,
+          ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
         });
       }
     } catch (error) {
