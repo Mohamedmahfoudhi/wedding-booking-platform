@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Card } from 'primereact/card';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
-import { Avatar } from 'primereact/avatar';
 import { Skeleton } from 'primereact/skeleton';
 import { Toast } from 'primereact/toast';
 import { messagesApi } from '../../api/client';
@@ -31,15 +29,15 @@ export default function ClientMessages() {
     const providerId = searchParams.get('provider');
     if (providerId && conversations.length > 0) {
       const existing = conversations.find(
-        (c) => c.provider?.id === providerId || c.client?.id === providerId
+        (c) => c.provider?.id === providerId || c.client?.id === providerId,
       );
       if (existing) {
         setSelectedConversation(existing);
       } else {
-        // Start new conversation
         startNewConversation(providerId);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, conversations]);
 
   useEffect(() => {
@@ -83,7 +81,7 @@ export default function ClientMessages() {
       const newConversation: Conversation | undefined =
         response.data.data?.conversation;
       if (!newConversation) return;
-      setConversations([newConversation, ...conversations]);
+      setConversations((prev) => [newConversation, ...prev]);
       setSelectedConversation(newConversation);
     } catch (error) {
       console.error('Failed to start conversation', error);
@@ -97,9 +95,9 @@ export default function ClientMessages() {
     try {
       const response = await messagesApi.sendMessage(selectedConversation.id, newMessage);
       const sent: Message | undefined = response.data.data?.message;
-      if (sent) setMessages([...messages, sent]);
+      if (sent) setMessages((prev) => [...prev, sent]);
       setNewMessage('');
-    } catch (error) {
+    } catch {
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
@@ -114,29 +112,26 @@ export default function ClientMessages() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const formatTime = (date: string) => {
-    return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  const formatTime = (date: string) =>
+    new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  const formatDate = (date: string) => {
+  const formatDay = (date: string) => {
     const d = new Date(date);
     const today = new Date();
-    if (d.toDateString() === today.toDateString()) {
-      return 'Today';
-    }
+    if (d.toDateString() === today.toDateString()) return 'Today';
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    if (d.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
-    }
-    return d.toLocaleDateString();
+    if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+    return d.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
   };
 
   const getOtherParticipantDisplay = (conversation: Conversation) => {
     const isClient = conversation.client?.id === user?.id;
     if (isClient) {
       const p = conversation.provider;
-      const name = p?.businessName || `${p?.user?.firstName ?? ''} ${p?.user?.lastName ?? ''}`.trim();
+      const name =
+        p?.businessName ||
+        `${p?.user?.firstName ?? ''} ${p?.user?.lastName ?? ''}`.trim();
       return {
         name: name || 'Provider',
         initial: (p?.businessName?.charAt(0) || p?.user?.firstName?.charAt(0) || 'P').toUpperCase(),
@@ -150,23 +145,29 @@ export default function ClientMessages() {
     };
   };
 
+  // Group messages by day for the day dividers
+  const groupedMessages = (() => {
+    const groups: Array<{ day: string; items: Message[] }> = [];
+    for (const m of messages) {
+      const day = formatDay(m.createdAt);
+      const last = groups[groups.length - 1];
+      if (last && last.day === day) last.items.push(m);
+      else groups.push({ day, items: [m] });
+    }
+    return groups;
+  })();
+
   if (loading) {
     return (
-      <div className="surface-ground min-h-screen p-4">
-        <div className="container">
-          <Skeleton width="200px" height="2rem" className="mb-4" />
-          <div className="grid">
-            <div className="col-4">
-              <Card>
-                <Skeleton height="400px" />
-              </Card>
-            </div>
-            <div className="col-8">
-              <Card>
-                <Skeleton height="400px" />
-              </Card>
-            </div>
+      <div className="surface-ground min-h-screen">
+        <div className="dashboard-hero dashboard-hero--compact">
+          <div className="container">
+            <Skeleton width="120px" height="1rem" className="mb-2" />
+            <Skeleton width="180px" height="1.875rem" />
           </div>
+        </div>
+        <div className="container py-4 dashboard-content">
+          <Skeleton height="520px" style={{ borderRadius: 14 }} />
         </div>
       </div>
     );
@@ -176,139 +177,144 @@ export default function ClientMessages() {
     <div className="surface-ground min-h-screen">
       <Toast ref={toast} />
 
-      <div className="container py-4">
-        <h1 className="text-3xl font-bold mb-4">Messages</h1>
+      <div className="dashboard-hero dashboard-hero--compact">
+        <div className="container">
+          <p className="dashboard-hero-greeting">Account</p>
+          <h1 className="dashboard-hero-title">Messages</h1>
+          <div className="dashboard-hero-row">
+            <span className="dashboard-hero-chip">
+              <i className="pi pi-comments" />
+              {conversations.length} conversation{conversations.length === 1 ? '' : 's'}
+            </span>
+          </div>
+        </div>
+      </div>
 
-        <div className="grid" style={{ height: 'calc(100vh - 200px)' }}>
-          {/* Conversations List */}
-          <div className="col-12 md:col-4">
-            <Card className="h-full overflow-auto">
+      <div className="container py-4 dashboard-content">
+        <div className="messages-shell">
+          <aside className="messages-list">
+            <div className="messages-list-head">
+              <h3>Conversations</h3>
+            </div>
+            <div className="messages-list-body">
               {conversations.length === 0 ? (
-                <div className="text-center py-6">
-                  <i className="pi pi-comments text-4xl text-color-secondary mb-3" />
-                  <p className="text-color-secondary">No conversations yet</p>
+                <div className="messages-empty-list">
+                  <i className="pi pi-comments" />
+                  <p>No conversations yet.</p>
                 </div>
               ) : (
-                <div className="flex flex-column gap-2">
-                  {conversations.map((conversation) => {
-                    const other = getOtherParticipantDisplay(conversation);
-                    const isSelected = selectedConversation?.id === conversation.id;
-                    return (
-                      <div
-                        key={conversation.id}
-                        className={`flex align-items-center gap-3 p-3 border-round cursor-pointer ${
-                          isSelected ? 'bg-primary-50' : 'hover:surface-100'
-                        }`}
-                        onClick={() => setSelectedConversation(conversation)}
-                      >
-                        <Avatar
-                          label={other.initial}
-                          shape="circle"
-                          size="large"
-                          className="bg-primary text-white"
-                        />
-                        <div className="flex-grow-1 overflow-hidden">
-                          <div className="flex justify-content-between">
-                            <span className="font-medium">{other.name}</span>
-                            <span className="text-xs text-color-secondary">
-                              {conversation.lastMessageAt && formatDate(conversation.lastMessageAt)}
+                conversations.map((conversation) => {
+                  const other = getOtherParticipantDisplay(conversation);
+                  const isSelected = selectedConversation?.id === conversation.id;
+                  return (
+                    <div
+                      key={conversation.id}
+                      className={`conversation-item ${isSelected ? 'conversation-item--active' : ''}`}
+                      onClick={() => setSelectedConversation(conversation)}
+                      role="button"
+                    >
+                      <div className="conversation-avatar">{other.initial}</div>
+                      <div className="conversation-info">
+                        <div className="conversation-info-top">
+                          <span className="conversation-name">{other.name}</span>
+                          {conversation.lastMessageAt && (
+                            <span className="conversation-time">
+                              {formatDay(conversation.lastMessageAt)}
                             </span>
-                          </div>
-                          <p className="text-sm text-color-secondary m-0 white-space-nowrap overflow-hidden text-overflow-ellipsis">
-                            {conversation.service?.name || 'General inquiry'}
-                          </p>
+                          )}
                         </div>
+                        <p className="conversation-preview">
+                          {conversation.service?.name || 'General inquiry'}
+                        </p>
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </Card>
-          </div>
-
-          {/* Messages Area */}
-          <div className="col-12 md:col-8">
-            <Card className="h-full flex flex-column">
-              {selectedConversation ? (
-                <>
-                  {/* Header */}
-                  <div className="flex align-items-center gap-3 pb-3 border-bottom-1 surface-border">
-                    <Avatar
-                      label={getOtherParticipantDisplay(selectedConversation).initial}
-                      shape="circle"
-                      className="bg-primary text-white"
-                    />
-                    <div>
-                      <p className="font-medium m-0">
-                        {getOtherParticipantDisplay(selectedConversation).name}
-                      </p>
-                      <p className="text-sm text-color-secondary m-0">
-                        {selectedConversation.service?.name || 'General inquiry'}
-                      </p>
                     </div>
-                  </div>
+                  );
+                })
+              )}
+            </div>
+          </aside>
 
-                  {/* Messages */}
-                  <div className="flex-grow-1 overflow-auto py-4" style={{ minHeight: '300px' }}>
-                    {messages.length === 0 ? (
-                      <div className="text-center text-color-secondary">
-                        Start the conversation
+          <section className="chat-panel">
+            {selectedConversation ? (
+              <>
+                <div className="chat-head">
+                  <div className="conversation-avatar">
+                    {getOtherParticipantDisplay(selectedConversation).initial}
+                  </div>
+                  <div className="chat-head-info">
+                    <p className="chat-head-name">
+                      {getOtherParticipantDisplay(selectedConversation).name}
+                    </p>
+                    <p className="chat-head-sub">
+                      {selectedConversation.service?.name || 'General inquiry'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="chat-body">
+                  {messages.length === 0 ? (
+                    <div className="chat-empty">
+                      <div className="chat-empty-icon">
+                        <i className="pi pi-send" />
                       </div>
-                    ) : (
-                      <div className="flex flex-column gap-3">
-                        {messages.map((message) => {
+                      <p style={{ margin: 0 }}>Start the conversation.</p>
+                    </div>
+                  ) : (
+                    groupedMessages.map((group) => (
+                      <div key={group.day}>
+                        <div className="chat-day-divider">
+                          <span>{group.day}</span>
+                        </div>
+                        {group.items.map((message) => {
                           const isOwn = message.sender?.id === user?.id;
                           return (
                             <div
                               key={message.id}
-                              className={`flex ${isOwn ? 'justify-content-end' : 'justify-content-start'}`}
+                              className={`chat-bubble-row ${isOwn ? 'chat-bubble-row--own' : ''}`}
                             >
                               <div
-                                className={`max-w-25rem p-3 border-round-xl ${
-                                  isOwn ? 'bg-primary text-white' : 'surface-100'
-                                }`}
+                                className={`chat-bubble ${isOwn ? 'chat-bubble--own' : 'chat-bubble--other'}`}
                               >
-                                <p className="m-0">{message.content}</p>
-                                <p
-                                  className={`text-xs m-0 mt-1 ${
-                                    isOwn ? 'text-white-alpha-70' : 'text-color-secondary'
-                                  }`}
-                                >
+                                <p>{message.content}</p>
+                                <span className="chat-bubble-time">
                                   {formatTime(message.createdAt)}
-                                </p>
+                                </span>
                               </div>
                             </div>
                           );
                         })}
-                        <div ref={messagesEndRef} />
                       </div>
-                    )}
-                  </div>
-
-                  {/* Input */}
-                  <div className="flex gap-2 pt-3 border-top-1 surface-border">
-                    <InputText
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type a message..."
-                      className="flex-grow-1"
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                    />
-                    <Button
-                      icon="pi pi-send"
-                      onClick={handleSendMessage}
-                      loading={sendingMessage}
-                      disabled={!newMessage.trim()}
-                    />
-                  </div>
-                </>
-              ) : (
-                <div className="flex align-items-center justify-content-center h-full text-color-secondary">
-                  Select a conversation to start messaging
+                    ))
+                  )}
+                  <div ref={messagesEndRef} />
                 </div>
-              )}
-            </Card>
-          </div>
+
+                <div className="chat-input">
+                  <InputText
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type a message..."
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                  />
+                  <Button
+                    icon="pi pi-send"
+                    onClick={handleSendMessage}
+                    loading={sendingMessage}
+                    disabled={!newMessage.trim()}
+                    tooltip="Send"
+                    tooltipOptions={{ position: 'left' }}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="chat-empty">
+                <div className="chat-empty-icon">
+                  <i className="pi pi-comments" />
+                </div>
+                <p style={{ margin: 0 }}>Select a conversation to start messaging.</p>
+              </div>
+            )}
+          </section>
         </div>
       </div>
     </div>

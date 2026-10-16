@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Rating } from 'primereact/rating';
 import { Toast } from 'primereact/toast';
@@ -22,7 +21,6 @@ export default function ClientFavorites() {
     try {
       const response = await favoritesApi.getAll();
       const items = response.data.data?.favorites || [];
-      // Backend returns Favorite entities wrapping the service; map to Service[]
       const services: Service[] = items.map((f: any) => f.service || f);
       setFavorites(services);
     } catch (error) {
@@ -40,19 +38,19 @@ export default function ClientFavorites() {
   const handleRemoveFavorite = (service: Service) => {
     confirmDialog({
       message: `Remove "${service.name}" from favorites?`,
-      header: 'Remove Favorite',
+      header: 'Remove favorite',
       icon: 'pi pi-heart',
       acceptClassName: 'p-button-danger',
       accept: async () => {
         try {
           await favoritesApi.remove(service.id);
-          setFavorites(favorites.filter((f) => f.id !== service.id));
+          setFavorites((prev) => prev.filter((f) => f.id !== service.id));
           toast.current?.show({
             severity: 'info',
             summary: 'Removed',
             detail: 'Service removed from favorites',
           });
-        } catch (error) {
+        } catch {
           toast.current?.show({
             severity: 'error',
             summary: 'Error',
@@ -65,17 +63,18 @@ export default function ClientFavorites() {
 
   if (loading) {
     return (
-      <div className="surface-ground min-h-screen p-4">
-        <div className="container">
-          <Skeleton width="200px" height="2rem" className="mb-4" />
+      <div className="surface-ground min-h-screen">
+        <div className="dashboard-hero dashboard-hero--compact">
+          <div className="container">
+            <Skeleton width="120px" height="1rem" className="mb-2" />
+            <Skeleton width="220px" height="1.875rem" />
+          </div>
+        </div>
+        <div className="container py-4 dashboard-content">
           <div className="grid">
             {[1, 2, 3, 4].map((i) => (
               <div key={i} className="col-12 md:col-6 lg:col-3">
-                <Card>
-                  <Skeleton height="150px" className="mb-3" />
-                  <Skeleton width="70%" className="mb-2" />
-                  <Skeleton width="50%" />
-                </Card>
+                <Skeleton height="300px" style={{ borderRadius: 12 }} />
               </div>
             ))}
           </div>
@@ -89,73 +88,86 @@ export default function ClientFavorites() {
       <Toast ref={toast} />
       <ConfirmDialog />
 
-      <div className="container py-4">
-        <h1 className="text-3xl font-bold mb-4">My Favorites</h1>
+      <div className="dashboard-hero dashboard-hero--compact">
+        <div className="container">
+          <p className="dashboard-hero-greeting">Account</p>
+          <h1 className="dashboard-hero-title">My Favorites</h1>
+          <div className="dashboard-hero-row">
+            <span className="dashboard-hero-chip">
+              <i className="pi pi-heart-fill" />
+              {favorites.length} saved
+            </span>
+          </div>
+        </div>
+      </div>
 
+      <div className="container py-4 dashboard-content">
         {favorites.length === 0 ? (
-          <Card className="text-center py-6">
-            <i className="pi pi-heart text-5xl text-color-secondary mb-4" />
-            <h3 className="text-xl mb-3">No favorites yet</h3>
-            <p className="text-color-secondary mb-4">
-              Start adding services to your favorites to easily find them later
-            </p>
-            <Link to="/search">
-              <Button label="Browse Services" icon="pi pi-search" />
-            </Link>
-          </Card>
+          <div className="dashboard-panel">
+            <div className="dashboard-empty" style={{ padding: '3rem 1rem' }}>
+              <div className="dashboard-empty-icon">
+                <i className="pi pi-heart" />
+              </div>
+              <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>
+                No favorites yet
+              </h3>
+              <p>Start saving services you love to find them easily later.</p>
+              <Link to="/search">
+                <Button label="Browse services" icon="pi pi-search" />
+              </Link>
+            </div>
+          </div>
         ) : (
           <div className="grid">
             {favorites.map((service) => (
               <div key={service.id} className="col-12 md:col-6 lg:col-3">
-                <Card className="h-full">
-                  <div className="relative">
+                <div className="favorite-card-wrapper">
+                  <Button
+                    icon="pi pi-heart-fill"
+                    className="favorite-remove-btn p-button-rounded p-button-danger"
+                    tooltip="Remove from favorites"
+                    tooltipOptions={{ position: 'left' }}
+                    onClick={() => handleRemoveFavorite(service)}
+                  />
+                  <Link to={`/services/${service.id}`} className="provider-service-card">
                     <div
-                      className="border-round mb-3"
-                      style={{
-                        backgroundImage: `url(${service.images?.[0]?.url || '/placeholder-service.jpg'})`,
-                        height: '180px',
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                      }}
-                    />
-                    <Button
-                      icon="pi pi-heart-fill"
-                      className="p-button-rounded p-button-danger absolute"
-                      style={{ top: '8px', right: '8px' }}
-                      onClick={() => handleRemoveFavorite(service)}
-                    />
-                  </div>
-
-                  <Link to={`/services/${service.id}`} className="no-underline">
-                    <span className="text-xs surface-200 border-round px-2 py-1 mb-2 inline-block">
-                      {service.category?.name}
-                    </span>
-                    <h3 className="text-lg font-semibold mb-2 text-color">{service.name}</h3>
-                  </Link>
-
-                  <p className="text-color-secondary text-sm mb-3 line-clamp-2">
-                    {service.description}
-                  </p>
-
-                  <div className="flex align-items-center justify-content-between mb-3">
-                    <div className="flex align-items-center gap-1">
-                      <Rating value={service.avgRating || 0} readOnly cancel={false} stars={5} />
-                      <span className="text-xs text-color-secondary">
-                        ({service.reviewCount || 0})
-                      </span>
+                      className="provider-service-image"
+                      style={
+                        service.images?.[0]?.url
+                          ? { backgroundImage: `url(${service.images[0].url})` }
+                          : undefined
+                      }
+                    >
+                      {!service.images?.[0]?.url && (
+                        <div className="provider-service-image-empty">
+                          <i className="pi pi-image" />
+                        </div>
+                      )}
                     </div>
-                    <span className="font-bold text-primary">{service.basePrice} TND</span>
-                  </div>
-
-                  <Link to={`/services/${service.id}`} className="w-full no-underline">
-                    <Button
-                      label="View Details"
-                      icon="pi pi-arrow-right"
-                      iconPos="right"
-                      className="w-full p-button-outlined"
-                    />
+                    <div className="provider-service-body">
+                      {service.category?.name && (
+                        <span className="provider-service-chip">
+                          {service.category.name}
+                        </span>
+                      )}
+                      <h4 className="provider-service-name">{service.name}</h4>
+                      <div className="provider-service-footer">
+                        <span className="provider-service-rating">
+                          <Rating
+                            value={Number(service.avgRating) || 0}
+                            readOnly
+                            cancel={false}
+                            stars={5}
+                          />
+                          ({service.reviewCount || 0})
+                        </span>
+                        <span className="provider-service-price">
+                          {Number(service.basePrice ?? 0).toLocaleString()} TND
+                        </span>
+                      </div>
+                    </div>
                   </Link>
-                </Card>
+                </div>
               </div>
             ))}
           </div>

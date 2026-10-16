@@ -33,7 +33,7 @@ export declare class ProvidersController {
             totalPages: number;
         };
     }>;
-    findBySlug(slug: string): Promise<{
+    findBySlug(slugOrId: string): Promise<{
         provider: import("../../database/entities").ProviderProfile;
     }>;
 }

@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import { DataTable } from 'primereact/datatable';
 import { Column } from 'primereact/column';
 import { Button } from 'primereact/button';
-import { Card } from 'primereact/card';
 import { Tag } from 'primereact/tag';
 import { Toast } from 'primereact/toast';
 import { Dialog } from 'primereact/dialog';
@@ -13,6 +12,8 @@ import { Skeleton } from 'primereact/skeleton';
 import { ConfirmDialog, confirmDialog } from 'primereact/confirmdialog';
 import { providerBookingsApi } from '../../api/client';
 import { Booking, BookingStatus } from '../../types';
+
+type Severity = 'success' | 'info' | 'warning' | 'danger' | null;
 
 export default function ProviderBookings() {
   const [searchParams] = useSearchParams();
@@ -67,7 +68,7 @@ export default function ProviderBookings() {
       });
       loadBookings();
       setDetailsVisible(false);
-    } catch (error) {
+    } catch {
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
@@ -93,7 +94,7 @@ export default function ProviderBookings() {
       setRejectDialogVisible(false);
       setDetailsVisible(false);
       setRejectReason('');
-    } catch (error) {
+    } catch {
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
@@ -104,10 +105,10 @@ export default function ProviderBookings() {
     }
   };
 
-  const handleComplete = async (booking: Booking) => {
+  const handleComplete = (booking: Booking) => {
     confirmDialog({
       message: 'Mark this booking as completed?',
-      header: 'Complete Booking',
+      header: 'Complete booking',
       icon: 'pi pi-check-circle',
       accept: async () => {
         try {
@@ -118,7 +119,7 @@ export default function ProviderBookings() {
             detail: 'Booking marked as completed',
           });
           loadBookings();
-        } catch (error) {
+        } catch {
           toast.current?.show({
             severity: 'error',
             summary: 'Error',
@@ -129,7 +130,7 @@ export default function ProviderBookings() {
     });
   };
 
-  const getStatusSeverity = (status: string) => {
+  const getStatusSeverity = (status: string): Severity => {
     switch (status) {
       case 'confirmed':
         return 'success';
@@ -145,21 +146,26 @@ export default function ProviderBookings() {
     }
   };
 
-  const filterBookings = (status: string | null) => {
-    if (!status) return bookings;
-    return bookings.filter((b) => b.status === status);
+  const filterBookings = (status: string | null) =>
+    status === null ? bookings : bookings.filter((b) => b.status === status);
+
+  const counts = {
+    all: bookings.length,
+    pending: filterBookings(BookingStatus.PENDING).length,
+    confirmed: filterBookings(BookingStatus.CONFIRMED).length,
+    completed: filterBookings(BookingStatus.COMPLETED).length,
   };
 
   const clientTemplate = (rowData: Booking) => (
-    <div className="flex align-items-center gap-2">
-      <div className="w-2rem h-2rem border-circle bg-primary flex align-items-center justify-content-center text-white text-sm">
+    <div className="booking-service-cell">
+      <div className="conversation-avatar" style={{ width: 36, height: 36, fontSize: '0.85rem' }}>
         {rowData.client?.firstName?.charAt(0) || 'U'}
       </div>
-      <div>
-        <p className="m-0 font-medium">
+      <div className="booking-service-info">
+        <span className="booking-service-name" style={{ cursor: 'default' }}>
           {rowData.client?.firstName} {rowData.client?.lastName}
-        </p>
-        <p className="m-0 text-xs text-color-secondary">{rowData.client?.email}</p>
+        </span>
+        <span className="booking-service-meta">{rowData.client?.email}</span>
       </div>
     </div>
   );
@@ -169,6 +175,8 @@ export default function ProviderBookings() {
       <Button
         icon="pi pi-eye"
         className="p-button-rounded p-button-text"
+        tooltip="View details"
+        tooltipOptions={{ position: 'top' }}
         onClick={() => {
           setSelectedBooking(rowData);
           setDetailsVisible(true);
@@ -179,11 +187,15 @@ export default function ProviderBookings() {
           <Button
             icon="pi pi-check"
             className="p-button-rounded p-button-text p-button-success"
+            tooltip="Confirm"
+            tooltipOptions={{ position: 'top' }}
             onClick={() => handleConfirm(rowData)}
           />
           <Button
             icon="pi pi-times"
             className="p-button-rounded p-button-text p-button-danger"
+            tooltip="Reject"
+            tooltipOptions={{ position: 'top' }}
             onClick={() => {
               setSelectedBooking(rowData);
               setRejectDialogVisible(true);
@@ -195,40 +207,62 @@ export default function ProviderBookings() {
         <Button
           icon="pi pi-check-circle"
           className="p-button-rounded p-button-text"
-          onClick={() => handleComplete(rowData)}
           tooltip="Mark as completed"
+          tooltipOptions={{ position: 'top' }}
+          onClick={() => handleComplete(rowData)}
         />
       )}
     </div>
   );
 
-  const BookingsTable = ({ data }: { data: Booking[] }) => (
-    <DataTable value={data} responsiveLayout="scroll" paginator rows={10} emptyMessage="No bookings found">
-      <Column header="Client" body={clientTemplate} />
-      <Column field="service.name" header="Service" />
-      <Column
-        field="eventDate"
-        header="Event Date"
-        body={(row) => new Date(row.eventDate).toLocaleDateString()}
-        sortable
-      />
-      <Column field="total" header="Total" body={(row) => `${row.total} TND`} sortable />
-      <Column
-        field="status"
-        header="Status"
-        body={(row) => <Tag value={row.status} severity={getStatusSeverity(row.status)} />}
-      />
-      <Column body={actionsTemplate} style={{ width: '150px' }} />
-    </DataTable>
-  );
+  const BookingsTable = ({ data }: { data: Booking[] }) => {
+    if (data.length === 0) {
+      return (
+        <div className="dashboard-empty">
+          <div className="dashboard-empty-icon">
+            <i className="pi pi-calendar" />
+          </div>
+          <p>No bookings in this view.</p>
+        </div>
+      );
+    }
+    return (
+      <DataTable value={data} responsiveLayout="scroll" paginator rows={10}>
+        <Column header="Client" body={clientTemplate} />
+        <Column field="service.name" header="Service" />
+        <Column
+          field="eventDate"
+          header="Event Date"
+          body={(row) => new Date(row.eventDate).toLocaleDateString()}
+          sortable
+        />
+        <Column
+          field="total"
+          header="Total"
+          body={(row) => (
+            <span className="font-semibold">
+              {Number(row.total ?? 0).toLocaleString()} TND
+            </span>
+          )}
+          sortable
+        />
+        <Column
+          field="status"
+          header="Status"
+          body={(row) => (
+            <Tag value={row.status} severity={getStatusSeverity(row.status) ?? undefined} />
+          )}
+        />
+        <Column body={actionsTemplate} style={{ width: '150px' }} />
+      </DataTable>
+    );
+  };
 
   if (loading) {
     return (
       <div>
-        <Skeleton width="200px" height="2rem" className="mb-4" />
-        <Card>
-          <Skeleton height="400px" />
-        </Card>
+        <Skeleton width="180px" height="1.75rem" className="mb-4" />
+        <Skeleton height="420px" style={{ borderRadius: 14 }} />
       </div>
     );
   }
@@ -240,29 +274,30 @@ export default function ProviderBookings() {
 
       <h2 className="text-2xl font-bold mb-4">Bookings</h2>
 
-      <Card>
+      <div className="dashboard-panel">
         <TabView>
-          <TabPanel header={`All (${bookings.length})`}>
+          <TabPanel header={`All (${counts.all})`}>
             <BookingsTable data={filterBookings(null)} />
           </TabPanel>
-          <TabPanel header={`Pending (${filterBookings(BookingStatus.PENDING).length})`}>
+          <TabPanel header={`Pending (${counts.pending})`}>
             <BookingsTable data={filterBookings(BookingStatus.PENDING)} />
           </TabPanel>
-          <TabPanel header={`Confirmed (${filterBookings(BookingStatus.CONFIRMED).length})`}>
+          <TabPanel header={`Confirmed (${counts.confirmed})`}>
             <BookingsTable data={filterBookings(BookingStatus.CONFIRMED)} />
           </TabPanel>
-          <TabPanel header={`Completed (${filterBookings(BookingStatus.COMPLETED).length})`}>
+          <TabPanel header={`Completed (${counts.completed})`}>
             <BookingsTable data={filterBookings(BookingStatus.COMPLETED)} />
           </TabPanel>
         </TabView>
-      </Card>
+      </div>
 
       {/* Booking Details Dialog */}
       <Dialog
-        header="Booking Details"
+        header="Booking details"
         visible={detailsVisible}
         onHide={() => setDetailsVisible(false)}
         style={{ width: '600px' }}
+        className="booking-dialog"
         footer={
           selectedBooking?.status === BookingStatus.PENDING && (
             <div className="flex justify-content-end gap-2">
@@ -270,12 +305,10 @@ export default function ProviderBookings() {
                 label="Reject"
                 icon="pi pi-times"
                 className="p-button-danger p-button-outlined"
-                onClick={() => {
-                  setRejectDialogVisible(true);
-                }}
+                onClick={() => setRejectDialogVisible(true)}
               />
               <Button
-                label="Confirm Booking"
+                label="Confirm booking"
                 icon="pi pi-check"
                 onClick={() => handleConfirm(selectedBooking)}
                 loading={processing}
@@ -285,75 +318,19 @@ export default function ProviderBookings() {
         }
       >
         {selectedBooking && (
-          <div className="flex flex-column gap-4">
-            <div className="grid">
-              <div className="col-6">
-                <p className="text-color-secondary text-sm mb-1">Client</p>
-                <p className="font-medium m-0">
-                  {selectedBooking.client?.firstName} {selectedBooking.client?.lastName}
-                </p>
-                <p className="text-sm text-color-secondary m-0">{selectedBooking.client?.email}</p>
-                <p className="text-sm text-color-secondary m-0">{selectedBooking.client?.phone}</p>
-              </div>
-              <div className="col-6">
-                <p className="text-color-secondary text-sm mb-1">Service</p>
-                <p className="font-medium m-0">{selectedBooking.service?.name}</p>
-              </div>
-              <div className="col-6">
-                <p className="text-color-secondary text-sm mb-1">Event Date</p>
-                <p className="font-medium m-0">
-                  {new Date(selectedBooking.eventDate).toLocaleDateString()}
-                </p>
-              </div>
-              <div className="col-6">
-                <p className="text-color-secondary text-sm mb-1">Status</p>
-                <Tag
-                  value={selectedBooking.status}
-                  severity={getStatusSeverity(selectedBooking.status)}
-                />
-              </div>
-              <div className="col-6">
-                <p className="text-color-secondary text-sm mb-1">Total Price</p>
-                <p className="font-bold text-primary m-0">{selectedBooking.total} TND</p>
-              </div>
-              <div className="col-6">
-                <p className="text-color-secondary text-sm mb-1">Booking Source</p>
-                <p className="m-0">{selectedBooking.source || 'Marketplace'}</p>
-              </div>
-            </div>
-
-            {selectedBooking.notes && (
-              <div>
-                <p className="text-color-secondary text-sm mb-1">Client Notes</p>
-                <p className="m-0 surface-ground p-3 border-round">
-                  {selectedBooking.notes}
-                </p>
-              </div>
-            )}
-
-            {selectedBooking.packages && selectedBooking.packages.length > 0 && (
-              <div>
-                <p className="text-color-secondary text-sm mb-2">Selected Packages</p>
-                <div className="flex flex-column gap-2">
-                  {selectedBooking.packages.map((pkg) => (
-                    <div key={pkg.id} className="flex justify-content-between surface-ground p-3 border-round">
-                      <span>{pkg.name}</span>
-                      <span className="font-medium">{pkg.price} TND</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <ProviderBookingDetails
+            booking={selectedBooking}
+            statusSeverity={getStatusSeverity(selectedBooking.status)}
+          />
         )}
       </Dialog>
 
       {/* Reject Dialog */}
       <Dialog
-        header="Reject Booking"
+        header="Reject booking"
         visible={rejectDialogVisible}
         onHide={() => setRejectDialogVisible(false)}
-        style={{ width: '400px' }}
+        style={{ width: '420px' }}
         footer={
           <div className="flex justify-content-end gap-2">
             <Button
@@ -362,7 +339,7 @@ export default function ProviderBookings() {
               onClick={() => setRejectDialogVisible(false)}
             />
             <Button
-              label="Reject Booking"
+              label="Reject booking"
               icon="pi pi-times"
               className="p-button-danger"
               onClick={handleReject}
@@ -382,6 +359,166 @@ export default function ProviderBookings() {
           placeholder="e.g., Date not available, service fully booked..."
         />
       </Dialog>
+    </div>
+  );
+}
+
+function ProviderBookingDetails({
+  booking,
+  statusSeverity,
+}: {
+  booking: Booking;
+  statusSeverity: Severity;
+}) {
+  const total = Number(booking.total ?? 0);
+  const subtotal = Number(booking.subtotal ?? 0);
+  const discount = Number(booking.discount ?? 0);
+  const deposit = Number(booking.depositAmount ?? 0);
+
+  return (
+    <div>
+      <div className="booking-dialog-hero">
+        <div className="conversation-avatar" style={{ width: 72, height: 72, fontSize: '1.75rem' }}>
+          {booking.client?.firstName?.charAt(0) || 'U'}
+        </div>
+        <div className="booking-dialog-hero-info">
+          {booking.bookingNumber && (
+            <span className="booking-dialog-hero-number">#{booking.bookingNumber}</span>
+          )}
+          <h3 className="booking-dialog-hero-title">
+            {booking.client?.firstName} {booking.client?.lastName}
+          </h3>
+          <p className="booking-dialog-hero-sub">{booking.service?.name}</p>
+        </div>
+        <div className="booking-dialog-status">
+          <Tag value={booking.status} severity={statusSeverity ?? undefined} />
+        </div>
+      </div>
+
+      <div className="booking-dialog-body">
+        <div className="booking-dialog-section">
+          <p className="booking-dialog-section-title">
+            <i className="pi pi-user" /> Client
+          </p>
+          <div className="booking-dialog-info-grid">
+            <div className="booking-dialog-info">
+              <div className="booking-dialog-info-icon"><i className="pi pi-envelope" /></div>
+              <div>
+                <span className="booking-dialog-info-label">Email</span>
+                <p className="booking-dialog-info-value" style={{ wordBreak: 'break-all', fontSize: '0.8125rem' }}>
+                  {booking.client?.email || '—'}
+                </p>
+              </div>
+            </div>
+            <div className="booking-dialog-info">
+              <div className="booking-dialog-info-icon"><i className="pi pi-phone" /></div>
+              <div>
+                <span className="booking-dialog-info-label">Phone</span>
+                <p className="booking-dialog-info-value">{booking.client?.phone || '—'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="booking-dialog-section">
+          <p className="booking-dialog-section-title">
+            <i className="pi pi-calendar" /> Event
+          </p>
+          <div className="booking-dialog-info-grid">
+            <div className="booking-dialog-info">
+              <div className="booking-dialog-info-icon"><i className="pi pi-calendar" /></div>
+              <div>
+                <span className="booking-dialog-info-label">Event date</span>
+                <p className="booking-dialog-info-value">
+                  {new Date(booking.eventDate).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+            {typeof booking.guestCount === 'number' && (
+              <div className="booking-dialog-info">
+                <div className="booking-dialog-info-icon"><i className="pi pi-users" /></div>
+                <div>
+                  <span className="booking-dialog-info-label">Guests</span>
+                  <p className="booking-dialog-info-value">{booking.guestCount}</p>
+                </div>
+              </div>
+            )}
+            <div className="booking-dialog-info">
+              <div className="booking-dialog-info-icon"><i className="pi pi-tag" /></div>
+              <div>
+                <span className="booking-dialog-info-label">Source</span>
+                <p className="booking-dialog-info-value">{booking.source || 'Marketplace'}</p>
+              </div>
+            </div>
+            <div className="booking-dialog-info">
+              <div className="booking-dialog-info-icon"><i className="pi pi-clock" /></div>
+              <div>
+                <span className="booking-dialog-info-label">Received</span>
+                <p className="booking-dialog-info-value">
+                  {new Date(booking.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {booking.package && (
+          <div className="booking-dialog-section">
+            <p className="booking-dialog-section-title">
+              <i className="pi pi-box" /> Package
+            </p>
+            <div className="booking-dialog-info">
+              <div className="booking-dialog-info-icon"><i className="pi pi-star" /></div>
+              <div style={{ flex: 1 }}>
+                <span className="booking-dialog-info-label">Selected add-on</span>
+                <p className="booking-dialog-info-value">
+                  {booking.package.name}
+                  {typeof booking.package.price !== 'undefined' && (
+                    <span className="text-color-secondary font-normal text-sm ml-2">
+                      +{Number(booking.package.price).toLocaleString()} TND
+                    </span>
+                  )}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="booking-dialog-section">
+          <p className="booking-dialog-section-title">
+            <i className="pi pi-wallet" /> Payment summary
+          </p>
+          <div className="booking-dialog-price">
+            <div className="booking-dialog-price-row">
+              <span>Subtotal</span>
+              <span>{subtotal.toLocaleString()} TND</span>
+            </div>
+            {discount > 0 && (
+              <div className="booking-dialog-price-row booking-dialog-price-row--discount">
+                <span>Discount</span>
+                <span>− {discount.toLocaleString()} TND</span>
+              </div>
+            )}
+            {deposit > 0 && !booking.fullyPaid && (
+              <div className="booking-dialog-price-row">
+                <span>Deposit {booking.depositPaid ? '(paid)' : '(due)'}</span>
+                <span>{deposit.toLocaleString()} TND</span>
+              </div>
+            )}
+            <div className="booking-dialog-price-row booking-dialog-price-row--total">
+              <span>Total</span>
+              <span>{total.toLocaleString()} TND</span>
+            </div>
+          </div>
+        </div>
+
+        {booking.notes && (
+          <div className="booking-dialog-alert">
+            <span className="booking-dialog-alert-label">Client notes</span>
+            <p className="booking-dialog-alert-text">{booking.notes}</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

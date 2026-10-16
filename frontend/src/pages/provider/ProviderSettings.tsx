@@ -232,10 +232,8 @@ export default function ProviderSettings() {
   if (loading) {
     return (
       <div>
-        <Skeleton width="200px" height="2rem" className="mb-4" />
-        <Card>
-          <Skeleton height="400px" />
-        </Card>
+        <Skeleton width="180px" height="1.75rem" className="mb-4" />
+        <Skeleton height="420px" style={{ borderRadius: 14 }} />
       </div>
     );
   }
@@ -246,6 +244,7 @@ export default function ProviderSettings() {
 
       <h2 className="text-2xl font-bold mb-4">Settings</h2>
 
+      <div className="dashboard-panel">
       <TabView>
         <TabPanel header="Business Profile">
           <Card>
@@ -497,6 +496,7 @@ export default function ProviderSettings() {
           </Card>
         </TabPanel>
       </TabView>
+      </div>
     </div>
   );
 }

@@ -71,7 +71,23 @@ export class ProvidersService {
   async findBySlug(slug: string): Promise<ProviderProfile> {
     const profile = await this.providerRepository.findOne({
       where: { slug },
-      relations: ['user', 'services'],
+      relations: ['user', 'services', 'services.images', 'services.category'],
+    });
+
+    if (!profile) {
+      throw new NotFoundException('Provider not found');
+    }
+
+    return profile;
+  }
+
+  async findBySlugOrId(slugOrId: string): Promise<ProviderProfile> {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const where = uuidRegex.test(slugOrId) ? { id: slugOrId } : { slug: slugOrId };
+
+    const profile = await this.providerRepository.findOne({
+      where,
+      relations: ['user', 'services', 'services.images', 'services.category'],
     });
 
     if (!profile) {

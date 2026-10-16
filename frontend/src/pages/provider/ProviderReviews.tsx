@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { Card } from 'primereact/card';
 import { Button } from 'primereact/button';
 import { Rating } from 'primereact/rating';
 import { Dialog } from 'primereact/dialog';
@@ -25,11 +24,10 @@ export default function ProviderReviews() {
   const [responseText, setResponseText] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Stats
   const [stats, setStats] = useState({
     avgRating: 0,
     totalReviews: 0,
-    ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 },
+    ratingDistribution: { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 } as Record<number, number>,
   });
 
   useEffect(() => {
@@ -38,6 +36,7 @@ export default function ProviderReviews() {
 
   useEffect(() => {
     loadReviews();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, selectedService]);
 
   const loadServices = async () => {
@@ -62,11 +61,10 @@ export default function ProviderReviews() {
       setTotalRecords(wrapped.meta?.total ?? filtered.length);
 
       if (filtered.length > 0) {
-        const avg =
-          filtered.reduce((sum, r) => sum + r.rating, 0) / filtered.length;
-        const distribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        const avg = filtered.reduce((sum, r) => sum + r.rating, 0) / filtered.length;
+        const distribution: Record<number, number> = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
         filtered.forEach((r) => {
-          distribution[r.rating as keyof typeof distribution]++;
+          distribution[r.rating] = (distribution[r.rating] || 0) + 1;
         });
         setStats({
           avgRating: Math.round(avg * 10) / 10,
@@ -106,7 +104,7 @@ export default function ProviderReviews() {
       });
       setResponseDialogVisible(false);
       loadReviews();
-    } catch (error) {
+    } catch {
       toast.current?.show({
         severity: 'error',
         summary: 'Error',
@@ -124,18 +122,14 @@ export default function ProviderReviews() {
   const renderStarBar = (stars: number, count: number, total: number) => {
     const percentage = total > 0 ? (count / total) * 100 : 0;
     return (
-      <div className="flex align-items-center gap-2 mb-2">
-        <span className="w-1rem text-right">{stars}</span>
-        <i className="pi pi-star-fill text-yellow-500" />
-        <div
-          className="flex-grow-1 h-1rem surface-200 border-round overflow-hidden"
-        >
-          <div
-            className="h-full bg-yellow-500"
-            style={{ width: `${percentage}%` }}
-          />
+      <div key={stars} className="rating-bar-row">
+        <span className="rating-bar-star">
+          {stars} <i className="pi pi-star-fill" />
+        </span>
+        <div className="rating-bar-track">
+          <div className="rating-bar-fill" style={{ width: `${percentage}%` }} />
         </div>
-        <span className="w-2rem text-color-secondary text-sm">{count}</span>
+        <span className="rating-bar-count">{count}</span>
       </div>
     );
   };
@@ -143,17 +137,13 @@ export default function ProviderReviews() {
   if (loading && reviews.length === 0) {
     return (
       <div>
-        <Skeleton width="200px" height="2rem" className="mb-4" />
+        <Skeleton width="180px" height="1.75rem" className="mb-4" />
         <div className="grid">
-          <div className="col-12 md:col-4">
-            <Card>
-              <Skeleton height="200px" />
-            </Card>
+          <div className="col-12 lg:col-4">
+            <Skeleton height="320px" style={{ borderRadius: 14 }} />
           </div>
-          <div className="col-12 md:col-8">
-            <Card>
-              <Skeleton height="400px" />
-            </Card>
+          <div className="col-12 lg:col-8">
+            <Skeleton height="420px" style={{ borderRadius: 14 }} />
           </div>
         </div>
       </div>
@@ -167,36 +157,29 @@ export default function ProviderReviews() {
       <h2 className="text-2xl font-bold mb-4">Reviews</h2>
 
       <div className="grid">
-        {/* Stats Card */}
+        {/* Rating overview */}
         <div className="col-12 lg:col-4">
-          <Card className="h-full">
-            <div className="text-center mb-4">
-              <p className="text-5xl font-bold text-primary m-0">
-                {stats.avgRating.toFixed(1)}
-              </p>
-              <Rating value={stats.avgRating} readOnly cancel={false} className="my-2" />
-              <p className="text-color-secondary m-0">
-                Based on {stats.totalReviews} reviews
+          <div className="dashboard-panel reviews-stat-panel">
+            <div className="reviews-stat-head">
+              <p className="reviews-stat-avg">{stats.avgRating.toFixed(1)}</p>
+              <Rating value={stats.avgRating} readOnly cancel={false} />
+              <p className="reviews-stat-count">
+                Based on {stats.totalReviews} review{stats.totalReviews === 1 ? '' : 's'}
               </p>
             </div>
-
-            <div className="mt-4">
+            <div className="reviews-stat-bars">
               {[5, 4, 3, 2, 1].map((stars) =>
-                renderStarBar(
-                  stars,
-                  stats.ratingDistribution[stars as keyof typeof stats.ratingDistribution],
-                  stats.totalReviews
-                )
+                renderStarBar(stars, stats.ratingDistribution[stars] || 0, stats.totalReviews),
               )}
             </div>
-          </Card>
+          </div>
         </div>
 
-        {/* Reviews List */}
+        {/* Reviews list */}
         <div className="col-12 lg:col-8">
-          <Card>
-            <div className="flex justify-content-between align-items-center mb-4">
-              <h3 className="m-0">All Reviews</h3>
+          <div className="dashboard-panel">
+            <div className="dashboard-panel-head">
+              <h2 className="dashboard-panel-title">All reviews</h2>
               <Dropdown
                 value={selectedService}
                 onChange={(e) => {
@@ -204,7 +187,7 @@ export default function ProviderReviews() {
                   setPage(1);
                 }}
                 options={[
-                  { label: 'All Services', value: null },
+                  { label: 'All services', value: null },
                   ...services.map((s) => ({ label: s.name, value: s.id })),
                 ]}
                 placeholder="Filter by service"
@@ -213,47 +196,46 @@ export default function ProviderReviews() {
             </div>
 
             {reviews.length === 0 ? (
-              <div className="text-center py-6">
-                <i className="pi pi-star text-5xl text-color-secondary mb-4" />
-                <h3 className="text-xl mb-3">No reviews yet</h3>
-                <p className="text-color-secondary">
-                  Reviews will appear here after customers complete their bookings
-                </p>
+              <div className="dashboard-empty" style={{ padding: '3rem 1rem' }}>
+                <div className="dashboard-empty-icon">
+                  <i className="pi pi-star" />
+                </div>
+                <h3 style={{ margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>
+                  No reviews yet
+                </h3>
+                <p>Reviews will appear here once customers complete their bookings.</p>
               </div>
             ) : (
-              <div className="flex flex-column gap-4">
+              <div>
                 {reviews.map((review) => (
-                  <div key={review.id} className="surface-ground p-4 border-round">
-                    <div className="flex justify-content-between mb-3">
-                      <div className="flex align-items-center gap-3">
-                        <div className="w-3rem h-3rem border-circle bg-primary flex align-items-center justify-content-center text-white font-bold">
-                          {review.user?.firstName?.charAt(0) || 'U'}
+                  <div key={review.id} className="service-review">
+                    <div className="service-review-head">
+                      <div className="service-review-user">
+                        <div className="service-review-avatar">
+                          {review.client?.firstName?.charAt(0) || 'U'}
                         </div>
                         <div>
-                          <p className="font-medium m-0">
-                            {review.user?.firstName} {review.user?.lastName}
-                          </p>
-                          <p className="text-sm text-color-secondary m-0">
-                            {review.service?.name}
-                          </p>
+                          <div className="service-review-name">
+                            {review.client?.firstName} {review.client?.lastName}
+                          </div>
+                          <span className="service-review-date">
+                            {review.service?.name && `${review.service.name} · `}
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </span>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <Rating value={review.rating} readOnly cancel={false} />
-                        <p className="text-xs text-color-secondary mt-1 mb-0">
-                          {new Date(review.createdAt).toLocaleDateString()}
-                        </p>
-                      </div>
+                      <Rating value={review.rating} readOnly cancel={false} />
                     </div>
-
-                    <p className="line-height-3 m-0">{review.comment}</p>
+                    {review.comment && (
+                      <p className="service-review-comment">{review.comment}</p>
+                    )}
 
                     {review.providerResponse ? (
-                      <div className="mt-3 pl-4 border-left-3 border-primary">
-                        <p className="text-sm font-medium mb-1">Your Response:</p>
-                        <p className="text-sm m-0">{review.providerResponse}</p>
+                      <div className="service-review-response">
+                        <span className="service-review-response-label">Your response</span>
+                        <p>{review.providerResponse}</p>
                         <Button
-                          label="Edit Response"
+                          label="Edit response"
                           icon="pi pi-pencil"
                           className="p-button-text p-button-sm mt-2"
                           onClick={() => handleOpenResponse(review)}
@@ -261,9 +243,9 @@ export default function ProviderReviews() {
                       </div>
                     ) : (
                       <Button
-                        label="Respond to Review"
+                        label="Respond to review"
                         icon="pi pi-reply"
-                        className="p-button-outlined mt-3"
+                        className="p-button-outlined p-button-sm mt-3"
                         onClick={() => handleOpenResponse(review)}
                       />
                     )}
@@ -281,16 +263,16 @@ export default function ProviderReviews() {
                 className="mt-4"
               />
             )}
-          </Card>
+          </div>
         </div>
       </div>
 
       {/* Response Dialog */}
       <Dialog
-        header={selectedReview?.providerResponse ? 'Edit Response' : 'Respond to Review'}
+        header={selectedReview?.providerResponse ? 'Edit response' : 'Respond to review'}
         visible={responseDialogVisible}
         onHide={() => setResponseDialogVisible(false)}
-        style={{ width: '500px' }}
+        style={{ width: '540px' }}
         footer={
           <div className="flex justify-content-end gap-2">
             <Button
@@ -299,7 +281,7 @@ export default function ProviderReviews() {
               onClick={() => setResponseDialogVisible(false)}
             />
             <Button
-              label="Submit Response"
+              label="Submit response"
               icon="pi pi-check"
               onClick={handleSubmitResponse}
               loading={saving}
@@ -310,18 +292,30 @@ export default function ProviderReviews() {
       >
         {selectedReview && (
           <div>
-            <div className="surface-ground p-3 border-round mb-4">
-              <div className="flex align-items-center gap-2 mb-2">
-                <span className="font-medium">
-                  {selectedReview.user?.firstName} {selectedReview.user?.lastName}
-                </span>
+            <div className="service-review" style={{ marginBottom: '1rem' }}>
+              <div className="service-review-head">
+                <div className="service-review-user">
+                  <div className="service-review-avatar">
+                    {selectedReview.client?.firstName?.charAt(0) || 'U'}
+                  </div>
+                  <div>
+                    <div className="service-review-name">
+                      {selectedReview.client?.firstName} {selectedReview.client?.lastName}
+                    </div>
+                    <span className="service-review-date">
+                      {new Date(selectedReview.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
                 <Rating value={selectedReview.rating} readOnly cancel={false} />
               </div>
-              <p className="text-sm m-0">{selectedReview.comment}</p>
+              {selectedReview.comment && (
+                <p className="service-review-comment">{selectedReview.comment}</p>
+              )}
             </div>
 
             <div className="field">
-              <label className="block font-medium mb-2">Your Response</label>
+              <label className="block font-medium mb-2">Your response</label>
               <InputTextarea
                 value={responseText}
                 onChange={(e) => setResponseText(e.target.value)}

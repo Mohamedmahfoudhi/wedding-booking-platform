@@ -60,7 +60,19 @@ let ProvidersService = class ProvidersService {
     async findBySlug(slug) {
         const profile = await this.providerRepository.findOne({
             where: { slug },
-            relations: ['user', 'services'],
+            relations: ['user', 'services', 'services.images', 'services.category'],
+        });
+        if (!profile) {
+            throw new common_1.NotFoundException('Provider not found');
+        }
+        return profile;
+    }
+    async findBySlugOrId(slugOrId) {
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        const where = uuidRegex.test(slugOrId) ? { id: slugOrId } : { slug: slugOrId };
+        const profile = await this.providerRepository.findOne({
+            where,
+            relations: ['user', 'services', 'services.images', 'services.category'],
         });
         if (!profile) {
             throw new common_1.NotFoundException('Provider not found');

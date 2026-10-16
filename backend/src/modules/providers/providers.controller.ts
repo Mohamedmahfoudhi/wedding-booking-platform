@@ -103,10 +103,10 @@ export class ProvidersController {
   }
 
   @Public()
-  @Get(':slug')
-  @ApiOperation({ summary: 'Get provider by slug' })
-  async findBySlug(@Param('slug') slug: string) {
-    const provider = await this.providersService.findBySlug(slug);
+  @Get(':slugOrId')
+  @ApiOperation({ summary: 'Get provider by slug or id' })
+  async findBySlug(@Param('slugOrId') slugOrId: string) {
+    const provider = await this.providersService.findBySlugOrId(slugOrId);
     return { provider };
   }
 }

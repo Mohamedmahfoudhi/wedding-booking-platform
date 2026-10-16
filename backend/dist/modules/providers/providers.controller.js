@@ -63,8 +63,8 @@ let ProvidersController = class ProvidersController {
             },
         };
     }
-    async findBySlug(slug) {
-        const provider = await this.providersService.findBySlug(slug);
+    async findBySlug(slugOrId) {
+        const provider = await this.providersService.findBySlugOrId(slugOrId);
         return { provider };
     }
 };
@@ -130,9 +130,9 @@ __decorate([
 ], ProvidersController.prototype, "findAll", null);
 __decorate([
     (0, public_decorator_1.Public)(),
-    (0, common_1.Get)(':slug'),
-    (0, swagger_1.ApiOperation)({ summary: 'Get provider by slug' }),
-    __param(0, (0, common_1.Param)('slug')),
+    (0, common_1.Get)(':slugOrId'),
+    (0, swagger_1.ApiOperation)({ summary: 'Get provider by slug or id' }),
+    __param(0, (0, common_1.Param)('slugOrId')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [String]),
     __metadata("design:returntype", Promise)

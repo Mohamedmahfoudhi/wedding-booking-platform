@@ -10,6 +10,7 @@ export declare class ProvidersService {
     createProfile(userId: string, createDto: CreateProviderDto): Promise<ProviderProfile>;
     findByUserId(userId: string): Promise<ProviderProfile>;
     findBySlug(slug: string): Promise<ProviderProfile>;
+    findBySlugOrId(slugOrId: string): Promise<ProviderProfile>;
     findById(id: string): Promise<ProviderProfile>;
     updateProfile(userId: string, updateDto: UpdateProviderDto): Promise<ProviderProfile>;
     findAll(page?: number, limit?: number, filters?: {

@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Card } from 'primereact/card';
 import { InputText } from 'primereact/inputtext';
 import { InputTextarea } from 'primereact/inputtextarea';
 import { InputNumber } from 'primereact/inputnumber';
@@ -8,7 +7,6 @@ import { Dropdown } from 'primereact/dropdown';
 import { Button } from 'primereact/button';
 import { FileUpload, FileUploadHandlerEvent } from 'primereact/fileupload';
 import { Toast } from 'primereact/toast';
-import { Divider } from 'primereact/divider';
 import { Skeleton } from 'primereact/skeleton';
 import { providerServicesApi, categoriesApi, uploadApi } from '../../api/client';
 import { Category, ServicePackage } from '../../types';
@@ -30,14 +28,17 @@ interface FormData {
   categoryId: string;
   basePrice: number;
   location: string;
-  images: { id?: string; url: string }[];
+  images: { id?: string; url: string; publicId?: string }[];
   packages: ServicePackage[];
 }
+
+const REQUIRED = <span className="services-form-required">*</span>;
 
 export default function ProviderServiceForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const toast = useRef<Toast>(null);
+  const fileUploadRef = useRef<FileUpload>(null);
   const isEdit = !!id;
 
   const [loading, setLoading] = useState(isEdit);
@@ -117,6 +118,7 @@ export default function ProviderServiceForm() {
         summary: 'Uploaded',
         detail: 'Images uploaded successfully',
       });
+      fileUploadRef.current?.clear();
     } catch (error) {
       toast.current?.show({
         severity: 'error',
@@ -178,7 +180,7 @@ export default function ProviderServiceForm() {
     try {
       const payload = {
         ...formData,
-        images: formData.images.map((img: { url: string; publicId?: string }) => ({
+        images: formData.images.map((img) => ({
           url: img.url,
           ...(img.publicId ? { publicId: img.publicId } : {}),
         })),
@@ -223,70 +225,133 @@ export default function ProviderServiceForm() {
     }
   };
 
+  const completion = useMemo(() => {
+    const checks = [
+      !!formData.name,
+      !!formData.description,
+      !!formData.categoryId,
+      !!formData.location,
+      formData.basePrice > 0,
+      formData.images.length > 0,
+    ];
+    const done = checks.filter(Boolean).length;
+    return { done, total: checks.length, percent: Math.round((done / checks.length) * 100) };
+  }, [formData]);
+
   if (loading) {
     return (
       <div>
-        <Skeleton width="200px" height="2rem" className="mb-4" />
-        <Card>
-          <Skeleton height="400px" />
-        </Card>
+        <Skeleton width="240px" height="2rem" className="mb-4" />
+        <div className="grid">
+          <div className="col-12 lg:col-8">
+            <Skeleton height="600px" borderRadius="12px" />
+          </div>
+          <div className="col-12 lg:col-4">
+            <Skeleton height="400px" borderRadius="12px" />
+          </div>
+        </div>
       </div>
     );
   }
 
+  const sectionHeader = (icon: string, title: string, subtitle?: string) => (
+    <div className="services-form-section-head">
+      <div className="services-form-section-icon">
+        <i className={icon} />
+      </div>
+      <div>
+        <h3 className="services-form-section-title">{title}</h3>
+        {subtitle && <p className="services-form-section-subtitle">{subtitle}</p>}
+      </div>
+    </div>
+  );
+
   return (
-    <div>
+    <div className="services-form-page">
       <Toast ref={toast} />
 
-      <div className="flex justify-content-between align-items-center mb-4">
-        <h2 className="text-2xl font-bold m-0">
-          {isEdit ? 'Edit Service' : 'Create New Service'}
-        </h2>
-        <Button
-          label="Back to Services"
-          icon="pi pi-arrow-left"
-          className="p-button-text"
-          onClick={() => navigate('/provider/services')}
-        />
+      <div className="services-form-header">
+        <div>
+          <button
+            type="button"
+            className="services-form-back"
+            onClick={() => navigate('/provider/services')}
+          >
+            <i className="pi pi-arrow-left" />
+            <span>Back to services</span>
+          </button>
+          <h2 className="services-form-title">
+            {isEdit ? 'Edit Service' : 'Create New Service'}
+          </h2>
+          <p className="services-form-subtitle">
+            {isEdit
+              ? 'Update your listing details, media, and packages.'
+              : 'Fill in the details below to publish a new service to the marketplace.'}
+          </p>
+        </div>
+
+        <div className="services-form-progress">
+          <div className="services-form-progress-label">
+            <span>Completion</span>
+            <strong>{completion.percent}%</strong>
+          </div>
+          <div className="services-form-progress-bar">
+            <div
+              className="services-form-progress-fill"
+              style={{ width: `${completion.percent}%` }}
+            />
+          </div>
+          <span className="services-form-progress-note">
+            {completion.done} of {completion.total} required fields complete
+          </span>
+        </div>
       </div>
 
       <div className="grid">
         <div className="col-12 lg:col-8">
-          <Card>
-            <h3 className="mt-0 mb-4">Basic Information</h3>
+          {/* Basic Information */}
+          <div className="services-form-card">
+            {sectionHeader('pi pi-info-circle', 'Basic Information', 'Introduce your service to customers.')}
 
-            <div className="field mb-4">
-              <label htmlFor="name" className="block font-medium mb-2">
-                Service Name *
+            <div className="field">
+              <label htmlFor="name" className="services-form-label">
+                Service Name {REQUIRED}
               </label>
               <InputText
                 id="name"
                 value={formData.name}
                 onChange={(e) => handleChange('name', e.target.value)}
-                placeholder="Enter service name"
+                placeholder="e.g., Premium Wedding Photography Package"
                 className="w-full"
               />
+              <small className="services-form-help">
+                Give your service a clear, memorable name.
+              </small>
             </div>
 
-            <div className="field mb-4">
-              <label htmlFor="description" className="block font-medium mb-2">
-                Description *
+            <div className="field">
+              <label htmlFor="description" className="services-form-label">
+                Description {REQUIRED}
               </label>
               <InputTextarea
                 id="description"
                 value={formData.description}
                 onChange={(e) => handleChange('description', e.target.value)}
-                placeholder="Describe your service..."
-                rows={5}
+                placeholder="Describe what makes your service unique — what's included, your experience, and why couples should book with you..."
+                rows={6}
                 className="w-full"
+                autoResize
               />
+              <small className="services-form-help">
+                {formData.description.length} characters — aim for at least 100.
+              </small>
             </div>
 
             <div className="grid">
               <div className="col-12 md:col-6">
-                <div className="field mb-4">
-                  <label htmlFor="category" className="block font-medium mb-2">
-                    Category *
+                <div className="field">
+                  <label htmlFor="category" className="services-form-label">
+                    Category {REQUIRED}
                   </label>
                   <Dropdown
                     id="category"
@@ -299,25 +364,29 @@ export default function ProviderServiceForm() {
                 </div>
               </div>
               <div className="col-12 md:col-6">
-                <div className="field mb-4">
-                  <label htmlFor="location" className="block font-medium mb-2">
-                    Location *
+                <div className="field">
+                  <label htmlFor="location" className="services-form-label">
+                    Location {REQUIRED}
                   </label>
                   <Dropdown
                     id="location"
                     value={formData.location}
                     onChange={(e) => handleChange('location', e.value)}
                     options={locations}
-                    placeholder="Select location"
+                    placeholder="Select city"
                     className="w-full"
                   />
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="field mb-4">
-              <label htmlFor="basePrice" className="block font-medium mb-2">
-                Base Price (TND) *
+          {/* Pricing */}
+          <div className="services-form-card">
+            {sectionHeader('pi pi-tag', 'Pricing', 'Set the base price for your service.')}
+            <div className="field">
+              <label htmlFor="basePrice" className="services-form-label">
+                Base Price (TND) {REQUIRED}
               </label>
               <InputNumber
                 id="basePrice"
@@ -327,154 +396,211 @@ export default function ProviderServiceForm() {
                 currency="TND"
                 locale="fr-TN"
                 className="w-full"
+                placeholder="0"
               />
+              <small className="services-form-help">
+                Customers will see this as your starting price. Add packages below for upgrade options.
+              </small>
             </div>
+          </div>
 
-            <Divider />
+          {/* Images */}
+          <div className="services-form-card">
+            {sectionHeader('pi pi-image', 'Photos', 'Upload high-quality images that showcase your work.')}
 
-            <h3 className="mb-4">Images</h3>
-            <div className="mb-4">
-              {formData.images.length > 0 && (
-                <div className="flex gap-3 flex-wrap mb-4">
-                  {formData.images.map((image, index) => (
-                    <div key={index} className="relative">
-                      <img
-                        src={image.url}
-                        alt={`Service ${index + 1}`}
-                        className="border-round"
-                        style={{ width: '120px', height: '80px', objectFit: 'cover' }}
-                      />
-                      <Button
-                        icon="pi pi-times"
-                        className="p-button-rounded p-button-danger p-button-sm absolute"
-                        style={{ top: '-8px', right: '-8px' }}
-                        onClick={() => handleRemoveImage(index)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
+            {formData.images.length > 0 && (
+              <div className="services-form-gallery">
+                {formData.images.map((image, index) => (
+                  <div key={index} className="services-form-thumb">
+                    <img src={image.url} alt={`Service ${index + 1}`} />
+                    {index === 0 && <span className="services-form-thumb-badge">Cover</span>}
+                    <button
+                      type="button"
+                      className="services-form-thumb-remove"
+                      onClick={() => handleRemoveImage(index)}
+                      aria-label="Remove image"
+                    >
+                      <i className="pi pi-times" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="services-form-dropzone">
+              <i className="pi pi-cloud-upload services-form-dropzone-icon" />
+              <p className="services-form-dropzone-title">Upload photos</p>
+              <p className="services-form-dropzone-help">
+                PNG or JPG • Max 5 MB per image • Recommended 1200×800px
+              </p>
               <FileUpload
+                ref={fileUploadRef}
                 mode="basic"
                 accept="image/*"
                 multiple
                 maxFileSize={5000000}
                 customUpload
                 uploadHandler={handleImageUpload}
-                chooseLabel="Upload Images"
+                chooseLabel="Choose files"
                 auto
+                className="services-form-dropzone-button"
               />
-              <small className="text-color-secondary block mt-2">
-                Max 5MB per image. Recommended: 1200x800px
-              </small>
             </div>
+          </div>
 
-            <Divider />
-
-            <div className="flex justify-content-between align-items-center mb-4">
-              <h3 className="m-0">Add-on Packages</h3>
+          {/* Packages */}
+          <div className="services-form-card">
+            <div className="services-form-section-head services-form-section-head--split">
+              <div className="flex align-items-center gap-3">
+                <div className="services-form-section-icon">
+                  <i className="pi pi-box" />
+                </div>
+                <div>
+                  <h3 className="services-form-section-title">Add-on Packages</h3>
+                  <p className="services-form-section-subtitle">
+                    Optional upgrades customers can choose at checkout.
+                  </p>
+                </div>
+              </div>
               <Button
                 label="Add Package"
                 icon="pi pi-plus"
-                className="p-button-outlined"
+                className="p-button-outlined p-button-sm"
                 onClick={handleAddPackage}
               />
             </div>
 
-            {formData.packages.map((pkg, index) => (
-              <Card key={pkg.id || index} className="mb-3 surface-ground">
-                <div className="flex justify-content-between align-items-start mb-3">
-                  <span className="font-medium">Package {index + 1}</span>
-                  <Button
-                    icon="pi pi-trash"
-                    className="p-button-rounded p-button-text p-button-danger"
-                    onClick={() => handleRemovePackage(index)}
-                  />
-                </div>
-                <div className="grid">
-                  <div className="col-12 md:col-6">
-                    <div className="field mb-3">
-                      <label className="block font-medium mb-2">Package Name</label>
-                      <InputText
-                        value={pkg.name}
-                        onChange={(e) => handleUpdatePackage(index, 'name', e.target.value)}
-                        placeholder="e.g., Premium Package"
-                        className="w-full"
-                      />
+            {formData.packages.length === 0 ? (
+              <div className="services-form-empty">
+                <i className="pi pi-box" />
+                <p>No packages added yet.</p>
+                <span>Give customers upgrade options like premium editing or extra hours.</span>
+              </div>
+            ) : (
+              <div className="services-form-packages">
+                {formData.packages.map((pkg, index) => (
+                  <div key={pkg.id || index} className="services-form-package">
+                    <div className="services-form-package-head">
+                      <span className="services-form-package-num">Package {index + 1}</span>
+                      <button
+                        type="button"
+                        className="services-form-package-remove"
+                        onClick={() => handleRemovePackage(index)}
+                        aria-label="Remove package"
+                      >
+                        <i className="pi pi-trash" />
+                      </button>
+                    </div>
+                    <div className="grid">
+                      <div className="col-12 md:col-7">
+                        <div className="field">
+                          <label className="services-form-label">Package Name</label>
+                          <InputText
+                            value={pkg.name}
+                            onChange={(e) => handleUpdatePackage(index, 'name', e.target.value)}
+                            placeholder="e.g., Premium Package"
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+                      <div className="col-12 md:col-5">
+                        <div className="field">
+                          <label className="services-form-label">Price (TND)</label>
+                          <InputNumber
+                            value={pkg.price}
+                            onValueChange={(e) => handleUpdatePackage(index, 'price', e.value)}
+                            mode="currency"
+                            currency="TND"
+                            locale="fr-TN"
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+                      <div className="col-12">
+                        <div className="field">
+                          <label className="services-form-label">Description</label>
+                          <InputTextarea
+                            value={pkg.description}
+                            onChange={(e) => handleUpdatePackage(index, 'description', e.target.value)}
+                            placeholder="What's included in this package?"
+                            rows={2}
+                            className="w-full"
+                            autoResize
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div className="col-12 md:col-6">
-                    <div className="field mb-3">
-                      <label className="block font-medium mb-2">Price (TND)</label>
-                      <InputNumber
-                        value={pkg.price}
-                        onValueChange={(e) => handleUpdatePackage(index, 'price', e.value)}
-                        mode="currency"
-                        currency="TND"
-                        locale="fr-TN"
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-12">
-                    <div className="field">
-                      <label className="block font-medium mb-2">Description</label>
-                      <InputTextarea
-                        value={pkg.description}
-                        onChange={(e) => handleUpdatePackage(index, 'description', e.target.value)}
-                        placeholder="What's included in this package?"
-                        rows={2}
-                        className="w-full"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            ))}
-
-            {formData.packages.length === 0 && (
-              <p className="text-color-secondary text-center py-4">
-                No packages added yet. Add packages for optional add-ons.
-              </p>
+                ))}
+              </div>
             )}
-          </Card>
+          </div>
         </div>
 
+        {/* Preview */}
         <div className="col-12 lg:col-4">
-          <Card className="sticky" style={{ top: '80px' }}>
-            <h3 className="mt-0 mb-4">Preview</h3>
-            <div
-              className="border-round mb-3"
-              style={{
-                backgroundImage: `url(${formData.images[0]?.url || '/placeholder-service.jpg'})`,
-                height: '150px',
-                backgroundSize: 'cover',
-                backgroundPosition: 'center',
-              }}
-            />
-            <h4 className="mb-2">{formData.name || 'Service Name'}</h4>
-            <p className="text-color-secondary text-sm mb-3 line-clamp-3">
-              {formData.description || 'Service description will appear here...'}
-            </p>
-            <p className="font-bold text-primary text-xl mb-4">
-              {formData.basePrice || 0} TND
-            </p>
+          <div className="services-form-preview">
+            <div className="services-form-preview-header">
+              <i className="pi pi-eye" />
+              <span>Live preview</span>
+            </div>
 
-            <Divider />
+            <div className="services-form-preview-card">
+              <div
+                className="services-form-preview-image"
+                style={{
+                  backgroundImage: formData.images[0]?.url
+                    ? `url(${formData.images[0].url})`
+                    : undefined,
+                }}
+              >
+                {!formData.images[0] && (
+                  <div className="services-form-preview-image-empty">
+                    <i className="pi pi-image" />
+                    <span>Image goes here</span>
+                  </div>
+                )}
+              </div>
+              <div className="services-form-preview-body">
+                {formData.categoryId && (
+                  <span className="services-form-preview-chip">
+                    {categories.find((c) => c.id === formData.categoryId)?.name}
+                  </span>
+                )}
+                <h4>{formData.name || 'Your service name'}</h4>
+                {formData.location && (
+                  <div className="services-form-preview-location">
+                    <i className="pi pi-map-marker" />
+                    <span>{formData.location}</span>
+                  </div>
+                )}
+                <p className="services-form-preview-desc">
+                  {formData.description || 'A short description of your service will appear here.'}
+                </p>
+                <div className="services-form-preview-price">
+                  <span>Starting at</span>
+                  <strong>
+                    {formData.basePrice > 0 ? `${formData.basePrice.toLocaleString()} TND` : '—'}
+                  </strong>
+                </div>
+              </div>
+            </div>
 
-            <Button
-              label={isEdit ? 'Update Service' : 'Create Service'}
-              icon="pi pi-check"
-              className="w-full"
-              onClick={handleSubmit}
-              loading={saving}
-            />
-            <Button
-              label="Cancel"
-              className="w-full p-button-outlined mt-2"
-              onClick={() => navigate('/provider/services')}
-            />
-          </Card>
+            <div className="services-form-preview-actions">
+              <Button
+                label={isEdit ? 'Update Service' : 'Publish Service'}
+                icon="pi pi-check"
+                className="w-full"
+                onClick={handleSubmit}
+                loading={saving}
+              />
+              <Button
+                label="Cancel"
+                className="w-full p-button-outlined mt-2"
+                onClick={() => navigate('/provider/services')}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
