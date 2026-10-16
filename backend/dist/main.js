@@ -12,6 +12,7 @@ const transform_interceptor_1 = require("./common/interceptors/transform.interce
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule);
     const configService = app.get(config_1.ConfigService);
+    app.getHttpAdapter().getInstance().set('etag', false);
     app.use((0, helmet_1.default)({
         crossOriginResourcePolicy: { policy: 'cross-origin' },
     }));

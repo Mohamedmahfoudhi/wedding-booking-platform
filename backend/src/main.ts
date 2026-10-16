@@ -13,6 +13,10 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const configService = app.get(ConfigService);
 
+  // Disable ETag so authenticated API responses aren't served from the browser's
+  // stale cache via 304 (e.g. after a user's bookings/favorites change).
+  app.getHttpAdapter().getInstance().set('etag', false);
+
   // Security — allow cross-origin loads of static assets (images) in dev
   app.use(
     helmet({
