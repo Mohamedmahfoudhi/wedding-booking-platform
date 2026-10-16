@@ -38,13 +38,23 @@ export class MessagesService {
     userId: string,
     isProvider: boolean,
   ): Promise<Conversation[]> {
-    const where = isProvider ? { providerId: userId } : { clientId: userId };
+    const query = this.conversationRepository
+      .createQueryBuilder('conversation')
+      .leftJoinAndSelect('conversation.client', 'client')
+      .leftJoinAndSelect('conversation.provider', 'provider')
+      .leftJoinAndSelect('provider.user', 'providerUser')
+      .leftJoinAndSelect('conversation.service', 'service')
+      .orderBy('conversation.lastMessageAt', 'DESC', 'NULLS LAST');
 
-    return this.conversationRepository.find({
-      where,
-      relations: ['client', 'provider', 'provider.user', 'service'],
-      order: { lastMessageAt: 'DESC' },
-    });
+    // conversation.providerId is a FK to provider_profiles.id, so for a provider
+    // user we must match against provider.userId (the owner), not userId directly.
+    if (isProvider) {
+      query.where('provider.user_id = :userId', { userId });
+    } else {
+      query.where('conversation.client_id = :userId', { userId });
+    }
+
+    return query.getMany();
   }
 
   async getConversation(
@@ -53,7 +63,7 @@ export class MessagesService {
   ): Promise<Conversation> {
     const conversation = await this.conversationRepository.findOne({
       where: { id: conversationId },
-      relations: ['client', 'provider', 'provider.user', 'service', 'messages'],
+      relations: ['client', 'provider', 'provider.user', 'service'],
     });
 
     if (!conversation) {
@@ -97,28 +107,40 @@ export class MessagesService {
     // Verify access
     await this.getConversation(conversationId, senderId);
 
-    const message = this.messageRepository.create({
+    const created = this.messageRepository.create({
       conversationId,
       senderId,
       content,
       attachmentUrl,
     });
 
-    await this.messageRepository.save(message);
+    const saved = await this.messageRepository.save(created);
 
     // Update conversation last message time
     await this.conversationRepository.update(conversationId, {
       lastMessageAt: new Date(),
     });
 
-    return message;
+    // Reload with sender so the client can render the bubble on the correct side.
+    return this.messageRepository.findOne({
+      where: { id: saved.id },
+      relations: ['sender'],
+    }) as Promise<Message>;
   }
 
   async markAsRead(conversationId: string, userId: string): Promise<void> {
-    await this.messageRepository.update(
-      { conversationId, isRead: false },
-      { isRead: true, readAt: new Date() },
-    );
+    // Verify access first.
+    await this.getConversation(conversationId, userId);
+
+    // Only mark messages from the OTHER party — your own messages stay as-is.
+    await this.messageRepository
+      .createQueryBuilder()
+      .update(Message)
+      .set({ isRead: true, readAt: new Date() })
+      .where('conversation_id = :conversationId', { conversationId })
+      .andWhere('sender_id != :userId', { userId })
+      .andWhere('is_read = false')
+      .execute();
   }
 
   async getUnreadCount(userId: string, isProvider: boolean): Promise<number> {

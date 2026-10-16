@@ -129,4 +129,10 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       });
     }
   }
+
+  // Called by the REST controller after a message is persisted so the other
+  // participant (who may be subscribed via socket only) gets it live.
+  broadcastNewMessage(conversationId: string, message: unknown) {
+    this.server.to(`conversation:${conversationId}`).emit('new_message', message);
+  }
 }

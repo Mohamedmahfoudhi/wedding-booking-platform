@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { MessagesService } from './messages.service';
+import { MessagesGateway } from './messages.gateway';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User, UserRole } from '../../database/entities/user.entity';
@@ -20,7 +21,10 @@ import { User, UserRole } from '../../database/entities/user.entity';
 @UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(
+    private readonly messagesService: MessagesService,
+    private readonly messagesGateway: MessagesGateway,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get my conversations' })
@@ -104,6 +108,11 @@ export class MessagesController {
       body.content,
       body.attachmentUrl,
     );
+
+    // Broadcast to anyone currently in the conversation room so the other
+    // participant sees the message live without polling.
+    this.messagesGateway.broadcastNewMessage(id, message);
+
     return { message };
   }
 

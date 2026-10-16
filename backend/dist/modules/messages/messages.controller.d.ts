@@ -1,8 +1,10 @@
 import { MessagesService } from './messages.service';
+import { MessagesGateway } from './messages.gateway';
 import { User } from '../../database/entities/user.entity';
 export declare class MessagesController {
     private readonly messagesService;
-    constructor(messagesService: MessagesService);
+    private readonly messagesGateway;
+    constructor(messagesService: MessagesService, messagesGateway: MessagesGateway);
     getConversations(user: User): Promise<{
         conversations: import("../../database/entities").Conversation[];
     }>;

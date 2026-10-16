@@ -33,4 +33,5 @@ export declare class MessagesGateway implements OnGatewayConnection, OnGatewayDi
         userId: string;
     }): Promise<void>;
     notifyUser(userId: string, event: string, data: unknown): void;
+    broadcastNewMessage(conversationId: string, message: unknown): void;
 }

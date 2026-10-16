@@ -79,6 +79,9 @@ let MessagesGateway = class MessagesGateway {
             });
         }
     }
+    broadcastNewMessage(conversationId, message) {
+        this.server.to(`conversation:${conversationId}`).emit('new_message', message);
+    }
 };
 exports.MessagesGateway = MessagesGateway;
 __decorate([

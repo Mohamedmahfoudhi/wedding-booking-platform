@@ -16,12 +16,14 @@ exports.MessagesController = void 0;
 const common_1 = require("@nestjs/common");
 const swagger_1 = require("@nestjs/swagger");
 const messages_service_1 = require("./messages.service");
+const messages_gateway_1 = require("./messages.gateway");
 const jwt_auth_guard_1 = require("../../common/guards/jwt-auth.guard");
 const current_user_decorator_1 = require("../../common/decorators/current-user.decorator");
 const user_entity_1 = require("../../database/entities/user.entity");
 let MessagesController = class MessagesController {
-    constructor(messagesService) {
+    constructor(messagesService, messagesGateway) {
         this.messagesService = messagesService;
+        this.messagesGateway = messagesGateway;
     }
     async getConversations(user) {
         const isProvider = user.role === user_entity_1.UserRole.PROVIDER;
@@ -55,6 +57,7 @@ let MessagesController = class MessagesController {
     }
     async sendMessage(user, id, body) {
         const message = await this.messagesService.sendMessage(id, user.id, body.content, body.attachmentUrl);
+        this.messagesGateway.broadcastNewMessage(id, message);
         return { message };
     }
     async markAsRead(user, id) {
@@ -133,6 +136,7 @@ exports.MessagesController = MessagesController = __decorate([
     (0, common_1.Controller)('conversations'),
     (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard),
     (0, swagger_1.ApiBearerAuth)(),
-    __metadata("design:paramtypes", [messages_service_1.MessagesService])
+    __metadata("design:paramtypes", [messages_service_1.MessagesService,
+        messages_gateway_1.MessagesGateway])
 ], MessagesController);
 //# sourceMappingURL=messages.controller.js.map

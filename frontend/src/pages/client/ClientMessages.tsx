@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { InputText } from 'primereact/inputtext';
 import { Button } from 'primereact/button';
@@ -6,6 +6,7 @@ import { Skeleton } from 'primereact/skeleton';
 import { Toast } from 'primereact/toast';
 import { messagesApi } from '../../api/client';
 import { useAppSelector } from '../../store/hooks';
+import { useChatSocket } from '../../hooks/useChatSocket';
 import { Conversation, Message } from '../../types';
 
 export default function ClientMessages() {
@@ -25,20 +26,29 @@ export default function ClientMessages() {
     loadConversations();
   }, []);
 
+  const handledProviderParamRef = useRef<string | null>(null);
   useEffect(() => {
+    // Wait for the initial conversations fetch to finish — otherwise we can't
+    // tell "no match yet because the list is empty" from "no match because
+    // it's still loading", and we'd create duplicates.
+    if (loading) return;
+
     const providerId = searchParams.get('provider');
-    if (providerId && conversations.length > 0) {
-      const existing = conversations.find(
-        (c) => c.provider?.id === providerId || c.client?.id === providerId,
-      );
-      if (existing) {
-        setSelectedConversation(existing);
-      } else {
-        startNewConversation(providerId);
-      }
+    if (!providerId) return;
+
+    // Only act on each distinct ?provider= value once per mount so we don't
+    // re-create or re-select when `conversations` updates.
+    if (handledProviderParamRef.current === providerId) return;
+    handledProviderParamRef.current = providerId;
+
+    const existing = conversations.find((c) => c.provider?.id === providerId);
+    if (existing) {
+      setSelectedConversation(existing);
+    } else {
+      startNewConversation(providerId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, conversations]);
+  }, [searchParams, conversations, loading]);
 
   useEffect(() => {
     if (selectedConversation) {
@@ -49,6 +59,37 @@ export default function ClientMessages() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleIncomingMessage = useCallback(
+    (payload: unknown) => {
+      const message = payload as Message | undefined;
+      if (!message?.id) return;
+
+      // Only append if it belongs to the currently open conversation.
+      if (selectedConversation && message.conversationId === selectedConversation.id) {
+        setMessages((prev) => (prev.some((m) => m.id === message.id) ? prev : [...prev, message]));
+        if (message.sender?.id !== user?.id) {
+          messagesApi.markAsRead(selectedConversation.id).catch(() => {});
+        }
+      }
+
+      // Bump the conversation to the top of the sidebar with a fresh timestamp.
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => c.id === message.conversationId);
+        if (idx < 0) return prev;
+        const updated: Conversation = {
+          ...prev[idx],
+          lastMessageAt: message.createdAt ?? new Date().toISOString(),
+        };
+        return [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+      });
+    },
+    [selectedConversation, user?.id],
+  );
+
+  useChatSocket(user?.id, selectedConversation?.id, {
+    onNewMessage: handleIncomingMessage,
+  });
 
   const loadConversations = async () => {
     try {
@@ -95,7 +136,10 @@ export default function ClientMessages() {
     try {
       const response = await messagesApi.sendMessage(selectedConversation.id, newMessage);
       const sent: Message | undefined = response.data.data?.message;
-      if (sent) setMessages((prev) => [...prev, sent]);
+      if (sent) {
+        // The socket broadcast may have already appended this message.
+        setMessages((prev) => (prev.some((m) => m.id === sent.id) ? prev : [...prev, sent]));
+      }
       setNewMessage('');
     } catch {
       toast.current?.show({
